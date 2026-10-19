@@ -1,0 +1,316 @@
+/* Scoreboard only: Pico variables scale every rem with a 16:9 stage that fits the window. */
+
+:root {
+  --stage: min(1vw, 16vh / 9); /* 1% of the stage width */
+  --pico-font-size: clamp(9px, var(--stage) * 1.5, 40px);
+  --pico-spacing: 0.75rem;
+  --pico-typography-spacing-vertical: 0.5rem;
+  --pico-nav-element-spacing-vertical: 0.25rem;
+}
+
+/* The --pico-color-* palette comes from pico.colors.min.css; without it marks lose their background. */
+body {
+  --pico-mark-background-color: var(--pico-color-amber-200);
+  --pico-mark-color: var(--pico-color-slate-950);
+}
+
+[data-result="correct"],
+[data-finished] {
+  --pico-mark-background-color: var(--pico-color-jade-250);
+}
+
+[data-result="wrong"] {
+  --pico-mark-background-color: var(--pico-color-red-400);
+}
+
+h1 {
+  --pico-font-size: 3rem;
+}
+
+/* As a scroll container, the stage keeps its aspect ratio when content overflows. */
+#stage {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: calc(var(--stage) * 100);
+  aspect-ratio: 16 / 9;
+  padding: calc(var(--stage) * 2.5) calc(var(--stage) * 3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pico-spacing);
+  overflow: hidden;
+}
+
+#stage > *,
+#stage article {
+  margin: 0;
+}
+
+#sb-wait {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+#sb-wait > p {
+  font-size: 1.5rem;
+}
+
+/* Cards: the label wraps and clamps, the year sits in Pico's footer band, and text follows the card width. */
+#sb-timeline > article,
+#sb-hand > article {
+  --pico-block-spacing-horizontal: 0.6rem;
+  --pico-block-spacing-vertical: 0.5rem;
+  position: relative;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+#sb-timeline > article > p,
+#sb-hand > article > p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  margin: 0;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  text-wrap: pretty;
+}
+
+#sb-timeline > article > footer,
+#sb-hand > article > footer {
+  margin-top: auto;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* The timeline scrolls itself sideways; scoreboard.js centers the pending gap or the latest placement.
+   Its padding leaves room above the cards for result marks, and at the ends for the edge fade. */
+#sb-timeline {
+  position: relative;
+  flex: none;
+  display: flex;
+  justify-content: safe center;
+  gap: var(--pico-spacing);
+  padding: 1rem 2rem 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: linear-gradient(var(--pico-muted-border-color) 0 0) center / 100% 0.2rem no-repeat;
+  mask-image: linear-gradient(to right, transparent, #000 2rem, #000 calc(100% - 2rem), transparent);
+}
+
+#sb-timeline > article {
+  flex: none;
+  width: 8.5rem;
+  height: 8.5rem;
+}
+
+#sb-timeline > article > p {
+  font-size: clamp(0.7rem, 13cqi, 1rem);
+}
+
+/* scoreboard.js sets --chars on the strip to its longest year, so every year shares the size that fits it. */
+#sb-timeline > article > footer {
+  font-size: min(2rem, 160cqi / var(--chars, 4));
+}
+
+/* The pending card, shown in the gap the host picked. */
+#sb-timeline > article[data-ghost] {
+  background: color-mix(in srgb, var(--pico-mark-background-color) 12%, var(--pico-card-background-color));
+  box-shadow: none;
+  outline: 0.2rem dashed var(--pico-mark-background-color);
+  outline-offset: -0.2rem;
+}
+
+#sb-timeline > article[data-ghost] > footer {
+  background: transparent;
+  border-color: transparent;
+  color: var(--pico-mark-background-color);
+}
+
+#sb-timeline > article[data-result] {
+  outline: 0.2rem solid var(--pico-mark-background-color);
+}
+
+#sb-timeline > article[data-result] > footer {
+  border-color: transparent;
+  background: var(--pico-mark-background-color);
+  color: var(--pico-mark-color);
+}
+
+/* A card's result mark, or a player's UP NEXT or FINISHED, straddles the top edge. */
+#stage article > mark {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  translate: -50% -50%;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* A flex row in which only the label shrinks, so a long name never pushes the outcome or the label off the line.
+   pre keeps the spaces at the ends of the text between the mark and the label; the label itself collapses
+   whitespace, because an imported label may hold a line break. */
+#sb-status {
+  flex: none;
+  display: flex;
+  justify-content: safe center;
+  align-items: baseline;
+  font-size: 1.1rem;
+  white-space: pre;
+  overflow: hidden;
+}
+
+#sb-status > strong {
+  min-width: 0;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#sb-turn {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+#sb-player {
+  --pico-font-size: 1.5rem;
+  margin: 0;
+  text-align: center;
+}
+
+#sb-player > small {
+  color: var(--pico-muted-color);
+  font-weight: 400;
+}
+
+/* Up to eight cards share the row; the padding leaves room for the lifted pending card. */
+#sb-hand {
+  flex: 1;
+  min-height: 0;
+  max-height: 12rem;
+  display: flex;
+  justify-content: center;
+  gap: var(--pico-spacing);
+  padding-top: 0.5rem;
+}
+
+#sb-hand > article {
+  flex: 0 1 11rem;
+  min-width: 0;
+}
+
+/* Five lines at the largest size still fit the card height the stage leaves for the hand. Seven or eight cards
+   bring the font to its floor, where seven lines fit; six cards leave room for less than one more. */
+#sb-hand > article > p {
+  -webkit-line-clamp: 5;
+  font-size: clamp(0.8rem, 12cqi, 1.15rem);
+}
+
+#sb-hand:has(> article:nth-child(7)) > article > p {
+  -webkit-line-clamp: 7;
+}
+
+#sb-hand > article > footer {
+  font-size: 2rem;
+  color: var(--pico-muted-color);
+}
+
+#sb-hand > article[aria-current="true"] {
+  outline: 0.25rem solid var(--pico-mark-background-color);
+  translate: 0 -0.5rem;
+}
+
+#sb-hand > article[aria-current="true"] > footer {
+  color: var(--pico-mark-background-color);
+}
+
+#sb-players {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  gap: var(--pico-spacing);
+}
+
+#sb-players > article {
+  position: relative;
+  flex: 0 1 10rem;
+  min-width: 0;
+  padding: 0.55rem 0.75rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  line-height: 1.35;
+}
+
+#sb-players > article > :not(mark) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#sb-players > article > small {
+  color: var(--pico-muted-color);
+}
+
+#sb-players > article > small:empty {
+  display: none;
+}
+
+#sb-players > article[data-next] {
+  outline: 0.15rem solid var(--pico-mark-background-color);
+}
+
+/* Dimmed by color, not opacity: muted text on the card is just above 4.5:1, so any opacity below 1 fails AA. */
+#sb-players > article[data-out] {
+  color: var(--pico-muted-color);
+  border: 0.1rem dashed var(--pico-muted-border-color);
+}
+
+#sb-standings {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#sb-winner {
+  --pico-font-size: 2.25rem;
+  margin: 0;
+  text-align: center;
+}
+
+#sb-standings > div {
+  flex: 1;
+  min-height: 0;
+  container-type: size;
+  overflow: clip;
+}
+
+/* A row is a 1.25 line plus 0.5em of padding and a border, under 2em, so this font fits the --rows
+   that scoreboard.js sets until it reaches the 0.6rem floor. */
+#sb-standings table {
+  --pico-spacing: 0.5em;
+  --pico-background-color: transparent;
+  margin: 0;
+  font-size: clamp(0.6rem, 100cqb / var(--rows) / 2, 1.5rem);
+  line-height: 1.25;
+}
+
+#sb-standings td:last-child {
+  text-align: right;
+}

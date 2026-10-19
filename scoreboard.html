@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trial and Era · Scoreboard</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.min.css" integrity="sha384-L1dWfspMTHU/ApYnFiMz2QID/PlP1xCW9visvBdbEkOLkSSWsP6ZJWhPw6apiXxU" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7/js/all.min.js"
+    data-mutate-approach="sync"></script>
+  <script type="module" src="js/scoreboard.js"></script>
+</head>
+<body>
+  <main id="stage">
+    <nav>
+      <ul>
+        <li><mark><span class="fa-solid fa-timeline" aria-hidden="true"></span> TRIAL AND ERA</mark></li>
+        <li id="sb-goal"></li>
+      </ul>
+      <ul>
+        <li id="sb-round"></li>
+        <li id="sb-draw"></li>
+      </ul>
+    </nav>
+
+    <hgroup id="sb-wait">
+      <h1 id="sb-wait-title"></h1>
+      <p id="sb-wait-detail"></p>
+    </hgroup>
+
+    <section id="sb-timeline" aria-label="Timeline" hidden></section>
+
+    <p id="sb-status" hidden></p>
+
+    <section id="sb-turn" hidden>
+      <h2 id="sb-player"></h2>
+      <div id="sb-hand"></div>
+    </section>
+
+    <article id="sb-standings" hidden>
+      <header>
+        <h1 id="sb-winner"></h1>
+      </header>
+      <div>
+        <table>
+          <tbody id="sb-standings-body"></tbody>
+        </table>
+      </div>
+    </article>
+
+    <footer id="sb-players" aria-label="Players"></footer>
+  </main>
+
+  <template id="tpl-card">
+    <article>
+      <p></p>
+      <footer><strong></strong></footer>
+    </article>
+  </template>
+
+  <template id="tpl-player">
+    <article>
+      <strong></strong>
+      <small></small>
+    </article>
+  </template>
+
+  <template id="tpl-standing">
+    <tr>
+      <td></td>
+      <th scope="row"></th>
+      <td></td>
+    </tr>
+  </template>
+</body>
+</html>
