@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trial and Era · Host Console</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <script src="js/theme.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.orange.min.css"
+    integrity="sha384-Lm2BRg+RVlMvrTWma56pxmcU1F+JLC10iu1gmc37k8aBIhcsVT4htOZ7eubKpUV7" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/acme@5.3.0/index.css"
+    integrity="sha384-U2Cwo4qBTs74k28Xy82giXTL4Hl4gcASesb5uRlclWjZdE051iTEwHlW05jSvPJi" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/permanent-marker@5.3.0/index.css"
+    integrity="sha384-CMsh6IR48JKQQPH0gJJDTlh/8atPvP99yKNCRbdaYanh1YOamHlq4z3zfA6Ady11" crossorigin="anonymous">
+  <style>
+    /* Acme and Permanent Marker have a single 400 weight, so text set in them drops Pico's bold rather than get a
+       synthesized one. */
+    :root {
+      --font-display: Acme, var(--pico-font-family-sans-serif);
+      --font-marker: 'Permanent Marker', 'Segoe Print', 'Bradley Hand', casual, cursive;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      --pico-font-family: var(--font-display);
+      --pico-font-weight: 400;
+    }
+    caption, summary { font-family: var(--font-display); }
+    /* The gradient fills only the wordmark's text, so the icon keeps the solid primary color. */
+    header strong {
+      font-family: var(--font-marker);
+      font-weight: 400;
+      font-size: 1.5rem;
+      color: var(--pico-primary);
+      background: linear-gradient(90deg, var(--pico-primary), var(--pico-primary-hover));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Pico shrinks grouped buttons to their narrowest width, and browsers may break a line right after an icon. */
+    [role=group] > button, [role=search] > button, nav button { white-space: nowrap; }
+    /* On narrow screens the header buttons wrap below the title, still right-aligned. */
+    nav { flex-wrap: wrap; }
+    nav ul:last-of-type { margin-left: auto; }
+    /* An empty item would keep its padding and push the theme button off the right edge. */
+    li:has(> #open-scoreboard[hidden]) { display: none; }
+    /* Font Awesome keeps each fa-NAME class on the SVG it swaps in, so only the current theme's icon shows. */
+    :root[data-theme] #theme .fa-circle-half-stroke,
+    :root:not([data-theme=light]) #theme .fa-sun,
+    :root:not([data-theme=dark]) #theme .fa-moon { display: none; }
+
+    /* Deck rows hold inputs, so they use Pico's compact spacing and scroll sideways on narrow screens. */
+    #deck { overflow-x: auto; }
+    #deck-table, #sources {
+      --pico-form-element-spacing-vertical: 0.25rem;
+      --pico-form-element-spacing-horizontal: 0.5rem;
+    }
+    #deck-table :is(input, select), #sources :is(input, select) { margin-bottom: 0; }
+    #deck-table th { white-space: nowrap; }
+    #sources button { vertical-align: middle; }
+    #deck-table th:nth-child(2) { width: 55%; }
+    #deck-table [data-field=label] { min-width: 14rem; }
+    #deck-table [data-field=year] { width: 7rem; }
+
+    /* The hand is a row of radio cards that can also be dragged onto a gap. */
+    #hand { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    #hand > label {
+      margin: 0;
+      padding: 0.5rem 0.75rem;
+      border: var(--pico-border-width) solid var(--pico-muted-border-color);
+      border-radius: var(--pico-border-radius);
+      cursor: grab;
+    }
+    #hand > label:has(:checked) { border-color: var(--pico-primary-border); }
+
+    /* offsetLeft of the strip's children is measured from the strip, which scrolls to keep them in view. */
+    #strip {
+      position: relative;
+      display: flex;
+      align-items: stretch;
+      gap: 0.5rem;
+      overflow-x: auto;
+      padding: 0.25rem 0.25rem 0.75rem;
+    }
+    /* The scrolling strip would clip a card's shadow, so cards take a border instead. */
+    #strip > article {
+      flex: 0 0 10rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      margin: 0;
+      padding: 0.75rem;
+      box-shadow: none;
+      border: var(--pico-border-width) solid var(--pico-muted-border-color);
+    }
+    #strip > article > strong { display: block; font-family: var(--font-display); font-size: 1.5rem; font-weight: 400; }
+    #strip > article[data-latest] { outline: 0.2rem solid var(--pico-primary-border); }
+    #strip > button { flex: 0 0 auto; align-self: center; margin: 0; }
+    /* The pending gap shows the chosen card's label at a card's width. */
+    #strip > button[aria-pressed=true] { flex-basis: 10rem; align-self: stretch; }
+    #strip > button[data-over] { outline: 0.2rem dashed var(--pico-primary-border); outline-offset: 0.2rem; }
+
+    body > footer { color: var(--pico-muted-color); }
+  </style>
+  <script defer src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7/js/all.min.js"
+    data-mutate-approach="sync"></script>
+  <script type="module" src="js/host.js"></script>
+</head>
+<body>
+  <header class="container">
+    <nav>
+      <ul>
+        <li>
+          <strong><span class="fa-solid fa-timeline" aria-hidden="true"></span> Trial and Era</strong>
+        </li>
+        <li>
+          <small>
+            <span class="fa-solid fa-microphone-lines" aria-hidden="true"></span> host console
+          </small>
+        </li>
+      </ul>
+      <ul>
+        <li>
+          <button type="button" id="theme" class="secondary outline" aria-label="Theme: auto" title="Theme: auto">
+            <span class="fa-solid fa-circle-half-stroke" aria-hidden="true"></span>
+            <span class="fa-solid fa-sun" aria-hidden="true"></span>
+            <span class="fa-solid fa-moon" aria-hidden="true"></span>
+          </button>
+        </li>
+        <li>
+          <button type="button" id="open-scoreboard" class="secondary" hidden>
+            <span class="fa-solid fa-display" aria-hidden="true"></span> Open scoreboard
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div id="message" role="status"></div>
+
+    <section id="lobby" hidden>
+      <h2><span class="fa-solid fa-users" aria-hidden="true"></span> Players</h2>
+      <form id="add-player">
+        <fieldset role="group">
+          <input name="name" placeholder="Player name" aria-label="Player name" autocomplete="off" required>
+          <button type="submit">
+            <span class="fa-solid fa-user-plus" aria-hidden="true"></span> Add
+          </button>
+        </fieldset>
+      </form>
+      <table>
+        <tbody id="player-list"></tbody>
+      </table>
+      <button type="button" id="start-game">
+        <span class="fa-solid fa-play" aria-hidden="true"></span> Start game
+      </button>
+    </section>
+
+    <section id="setup" hidden>
+      <h2><span class="fa-solid fa-layer-group" aria-hidden="true"></span> Build the deck</h2>
+      <form id="source-form" role="search" autocomplete="off">
+        <input type="search" name="q" list="suggestions" placeholder="Search Wikipedia or paste a URL"
+          aria-label="List or timeline page" aria-describedby="source-help">
+        <button type="submit">
+          <span class="fa-solid fa-hammer" aria-hidden="true"></span> Build
+        </button>
+      </form>
+      <datalist id="suggestions"></datalist>
+      <p><small id="source-help">
+        Each row or item with an article link becomes a card. Try "Timeline of historic inventions",
+        "List of Pixar films" or "List of best-selling video games".
+      </small></p>
+
+      <div id="build" hidden>
+        <div id="build-name">
+          <span class="fa-solid fa-hammer" aria-hidden="true"></span>
+          <span id="build-label">Starting</span>
+        </div>
+        <progress id="build-progress" aria-labelledby="build-name"></progress>
+      </div>
+
+      <table id="sources" hidden>
+        <caption><span class="fa-solid fa-book-open" aria-hidden="true"></span> Sources</caption>
+        <thead>
+          <tr><th scope="col">Source</th><th scope="col">Cards</th><th scope="col">Labels</th>
+            <th scope="col"><span class="fa-solid fa-trash-can" aria-hidden="true"></span> Remove</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <details>
+        <summary><span class="fa-solid fa-keyboard" aria-hidden="true"></span> Type cards</summary>
+        <form id="card-form" autocomplete="off">
+          <fieldset role="group">
+            <input name="label" placeholder="Event, invention or work" aria-label="Card label" required>
+            <input name="year" placeholder="Year" aria-label="Year" aria-describedby="year-help" required>
+            <button type="submit">
+              <span class="fa-solid fa-plus" aria-hidden="true"></span> Add card
+            </button>
+          </fieldset>
+          <small id="year-help">Years read like 1876, c. 1440, 500 BC or AD 79.</small>
+        </form>
+        <form id="bulk-form" autocomplete="off">
+          <label>
+            One card per line, year first or last
+            <textarea name="lines" rows="5" aria-describedby="bulk-help"
+              placeholder="1876 Telephone&#10;Radio, 1895&#10;Great Pyramid of Giza, 2560 BC"></textarea>
+            <small id="bulk-help">Lines that do not parse stay in the box so you can fix them.</small>
+          </label>
+          <button type="submit" class="secondary">
+            <span class="fa-solid fa-list" aria-hidden="true"></span> Add cards
+          </button>
+        </form>
+      </details>
+
+      <form id="deal-form">
+        <label for="hand-size"><span class="fa-solid fa-hand" aria-hidden="true"></span> Cards per hand</label>
+        <fieldset role="group">
+          <input type="number" id="hand-size" name="handSize" min="1" max="8" step="1" required>
+          <button type="submit" id="deal" aria-describedby="deal-summary">
+            <span class="fa-solid fa-shuffle" aria-hidden="true"></span> Deal
+          </button>
+        </fieldset>
+        <p><small id="deal-summary"></small></p>
+      </form>
+
+      <article id="deck">
+        <header>
+          <hgroup>
+            <h3><span class="fa-solid fa-table-list" aria-hidden="true"></span> Deck</h3>
+            <p id="deck-meta"></p>
+          </hgroup>
+        </header>
+        <fieldset role="group">
+          <input type="search" id="deck-filter" placeholder="Filter cards" aria-label="Filter cards">
+          <select id="deck-view" aria-label="Show">
+            <option value="all">All cards</option>
+            <option value="included">Included</option>
+            <option value="excluded">Excluded</option>
+            <option value="noyear">Needs a year</option>
+            <option value="flagged">Flagged</option>
+          </select>
+        </fieldset>
+        <table id="deck-table">
+          <thead>
+            <tr>
+              <th scope="col"><span class="fa-solid fa-check" aria-hidden="true"></span> In</th>
+              <th scope="col">Card</th>
+              <th scope="col">Year</th>
+              <th scope="col">From</th>
+              <th scope="col"><span class="fa-solid fa-flag" aria-hidden="true"></span> Flags</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <footer>
+          <label>
+            <span class="fa-solid fa-file-import" aria-hidden="true"></span> Import a deck file
+            <input type="file" id="import-deck" accept=".json,application/json">
+          </label>
+          <button type="button" id="export-deck" class="secondary outline">
+            <span class="fa-solid fa-file-export" aria-hidden="true"></span> Export deck
+          </button>
+          <button type="button" id="clear-deck" class="contrast outline" commandfor="confirm-clear"
+            command="show-modal">
+            <span class="fa-solid fa-trash-can" aria-hidden="true"></span> Clear deck
+          </button>
+        </footer>
+      </article>
+    </section>
+
+    <section id="playing" hidden>
+      <hgroup>
+        <h2>
+          <span class="fa-solid fa-flag" aria-hidden="true"></span>
+          <span id="round-title"></span>
+        </h2>
+        <p id="round-meta"></p>
+      </hgroup>
+
+      <form id="turn-form">
+        <hgroup>
+          <h3>
+            <span class="fa-solid fa-hand-point-right" aria-hidden="true"></span>
+            <span id="turn-name"></span>
+          </h3>
+          <p id="turn-detail"></p>
+        </hgroup>
+        <fieldset id="hand">
+          <legend id="hand-legend"></legend>
+        </fieldset>
+        <div id="strip" role="region" aria-label="Timeline" aria-describedby="strip-help"></div>
+        <p><small id="strip-help">
+          Pick a gap by clicking it or dragging a card onto it, or move between gaps with the arrow keys and press
+          Enter, then reveal.
+        </small></p>
+        <fieldset role="group">
+          <button type="submit" id="reveal">
+            <span class="fa-solid fa-eye" aria-hidden="true"></span> Reveal
+          </button>
+          <button type="button" id="undo" class="secondary outline">
+            <span class="fa-solid fa-rotate-left" aria-hidden="true"></span> Undo last
+          </button>
+        </fieldset>
+      </form>
+      <p id="result" role="status"></p>
+
+      <table>
+        <caption><span class="fa-solid fa-users" aria-hidden="true"></span> Players</caption>
+        <thead>
+          <tr><th scope="col">Seat</th><th scope="col">Player</th><th scope="col">Cards left</th>
+            <th scope="col">Status</th></tr>
+        </thead>
+        <tbody id="player-table"></tbody>
+      </table>
+    </section>
+
+    <section id="over" hidden>
+      <hgroup>
+        <h2 id="over-heading" tabindex="-1">
+          <span class="fa-solid fa-crown" aria-hidden="true"></span>
+          <span id="over-title"></span>
+        </h2>
+        <p id="over-meta"></p>
+      </hgroup>
+      <table>
+        <thead><tr><th scope="col">Rank</th><th scope="col">Player</th><th scope="col">Cards left</th></tr></thead>
+        <tbody id="standings"></tbody>
+      </table>
+      <p>
+        <button type="button" id="undo-over" class="secondary outline">
+          <span class="fa-solid fa-rotate-left" aria-hidden="true"></span> Undo last
+        </button>
+        <button type="button" id="play-again">
+          <span class="fa-solid fa-shuffle" aria-hidden="true"></span> Play again
+        </button>
+        <button type="button" id="edit-deck" class="secondary">
+          <span class="fa-solid fa-pen-to-square" aria-hidden="true"></span> Edit deck
+        </button>
+      </p>
+    </section>
+
+    <details>
+      <summary><span class="fa-solid fa-gear" aria-hidden="true"></span> Settings</summary>
+      <p>New game ends the current game and returns to the lobby. Players, hand size and the deck stay.</p>
+      <button type="button" id="new-game" class="contrast" commandfor="confirm-new" command="show-modal">
+        <span class="fa-solid fa-arrows-rotate" aria-hidden="true"></span> New game
+      </button>
+    </details>
+  </main>
+
+  <footer class="container">
+    <small>A game by <a href="https://spitball.show" target="_blank">Spitball — Startup Ideas on Tap</a></small>
+  </footer>
+
+  <dialog id="confirm-new" aria-labelledby="confirm-new-title">
+    <article>
+      <h3 id="confirm-new-title">
+        <span class="fa-solid fa-triangle-exclamation" aria-hidden="true"></span> Start a new game?
+      </h3>
+      <p>This ends the current game. Players, hand size and the deck stay.</p>
+      <footer>
+        <form method="dialog">
+          <button value="cancel" class="secondary">
+            <span class="fa-solid fa-xmark" aria-hidden="true"></span> Cancel
+          </button>
+          <button value="confirm">
+            <span class="fa-solid fa-arrows-rotate" aria-hidden="true"></span> New game
+          </button>
+        </form>
+      </footer>
+    </article>
+  </dialog>
+
+  <dialog id="confirm-clear" aria-labelledby="confirm-clear-title">
+    <article>
+      <h3 id="confirm-clear-title">
+        <span class="fa-solid fa-triangle-exclamation" aria-hidden="true"></span> Clear the deck?
+      </h3>
+      <p>This removes every card and source, including your edits. Export the deck first to keep a copy.</p>
+      <footer>
+        <form method="dialog">
+          <button value="cancel" class="secondary">
+            <span class="fa-solid fa-xmark" aria-hidden="true"></span> Cancel
+          </button>
+          <button value="confirm">
+            <span class="fa-solid fa-trash-can" aria-hidden="true"></span> Clear deck
+          </button>
+        </form>
+      </footer>
+    </article>
+  </dialog>
+
+  <template id="tpl-player-row">
+    <tr>
+      <th scope="row"><span class="fa-solid fa-user" aria-hidden="true"></span></th>
+      <td>
+        <fieldset role="group">
+          <button type="button" class="secondary outline" data-act="up" aria-label="Move up">
+            <span class="fa-solid fa-arrow-up" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="secondary outline" data-act="down" aria-label="Move down">
+            <span class="fa-solid fa-arrow-down" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="contrast outline" data-act="remove" aria-label="Remove" title="Remove">
+            <span class="fa-solid fa-user-minus" aria-hidden="true"></span>
+          </button>
+        </fieldset>
+      </td>
+    </tr>
+  </template>
+
+  <template id="tpl-source-row">
+    <tr>
+      <th scope="row"></th>
+      <td></td>
+      <td>
+        <select aria-label="Labels">
+          <option value="link">Article title</option>
+          <option value="text">Entry text</option>
+        </select>
+      </td>
+      <td>
+        <button type="button" class="contrast outline" aria-label="Remove">
+          <span class="fa-solid fa-trash-can" aria-hidden="true"></span>
+        </button>
+      </td>
+    </tr>
+  </template>
+
+  <template id="tpl-deck-row">
+    <tr>
+      <td><input type="checkbox" data-field="include"></td>
+      <td><input data-field="label" autocomplete="off"></td>
+      <td><input data-field="year" autocomplete="off"></td>
+      <td></td>
+      <td></td>
+    </tr>
+  </template>
+
+  <template id="tpl-hand-card">
+    <label draggable="true"><input type="radio" name="card"> </label>
+  </template>
+
+  <template id="tpl-gap">
+    <button type="button"></button>
+  </template>
+
+  <template id="tpl-timeline-card">
+    <article><small></small><strong></strong></article>
+  </template>
+</body>
+</html>

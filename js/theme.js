@@ -1,4 +1,4 @@
-// Host console color scheme: auto, light or dark, remembered per browser. Pico follows the OS setting when
+// Splash and host console color scheme: auto, light or dark, remembered per browser. Pico follows the OS setting when
 // <html> has no data-theme. This is a classic blocking script in <head> so the stored theme applies before first paint.
 
 (function () {

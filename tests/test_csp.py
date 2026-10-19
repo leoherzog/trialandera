@@ -1,5 +1,5 @@
-"""The Content-Security-Policy from _headers: the server applies it, both pages load and render their icons under it
-with no violation, and it blocks inline scripts, eval, and requests to any origin but the Wikipedia and Wikidata APIs.
+"""The Content-Security-Policy from _headers: the server applies it, the splash, host and scoreboard pages load and
+render their icons under it with no violation, and it blocks inline scripts, eval, and requests to any origin but the Wikipedia and Wikidata APIs.
 Every other suite runs under the same policy and fails on any violation."""
 from playwright.sync_api import sync_playwright
 
@@ -37,11 +37,14 @@ with sync_playwright() as pw:
     MockWiki(ctx)
 
     page = watch(ctx.new_page(), 'host')
-    resp = page.goto(BASE + 'index.html')
-    check(resp.headers.get('content-security-policy') == POLICY, 'host page served with the policy from _headers')
+    resp = page.goto(BASE)
+    check(resp.headers.get('content-security-policy') == POLICY, 'splash page served with the policy from _headers')
+    page.wait_for_function("() => document.querySelector('svg.svg-inline--fa') !== null", timeout=15000)
+    check(page.evaluate('window.__csp') == [], 'no violations on the splash page')
     page.evaluate('localStorage.clear()')
-    page.reload()
+    page.click('#start')
     page.wait_for_selector('#lobby:not([hidden])')
+    check(page.url == BASE + 'host.html', 'Start game on the splash page opens the host console')
     add_players(page, ['Ana', 'Ben'])
     with ctx.expect_page() as pop:
         page.click('#start-game')

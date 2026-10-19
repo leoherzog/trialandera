@@ -1,4 +1,5 @@
-# Cloudflare Pages response headers. /* also covers /scoreboard and the index.html fallback Pages serves for unknown paths.
+# Cloudflare Pages response headers. /* also covers /host, /scoreboard and the index.html fallback Pages serves for unknown
+# paths.
 # connect-src admits only the Wikipedia and Wikidata APIs. style-src needs 'unsafe-inline' for the <style> Font Awesome
 # injects and for the inline styles in Wikipedia HTML, which documents parsed with DOMParser check against this policy.
 # font-src admits jsDelivr for the Acme and Permanent Marker files. img-src needs data: for Pico's form icons.

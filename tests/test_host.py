@@ -407,7 +407,7 @@ def extras(browser):
 
     # A second host tab's change reaches this one through the storage event.
     other = watch(ctx.new_page(), 'tab2')
-    other.goto(BASE + 'index.html')
+    other.goto(BASE + 'host.html')
     other.wait_for_selector('#playing:not([hidden])')
     gap = correct_gap(state(other)['game'], cid)
     other.click(f'#strip button[data-gap="{gap}"]')

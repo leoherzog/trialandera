@@ -94,7 +94,7 @@ def watch(page, tag):
 def open_host(ctx, tag='host'):
     """A host console page on a cleared localStorage, showing the lobby."""
     page = watch(ctx.new_page(), tag)
-    page.goto(BASE + 'index.html')
+    page.goto(BASE + 'host.html')
     page.evaluate('localStorage.clear()')
     page.reload()
     page.wait_for_selector('#lobby:not([hidden])')
@@ -290,7 +290,7 @@ def setup_state(n_cards=12, players=('Ana', 'Ben'), phase='setup', hand=4):
 
 def seed(page, st, ui_state=None):
     """Load the host console with only st, and ui_state if given, in localStorage."""
-    page.goto(BASE + 'index.html')
+    page.goto(BASE + 'host.html')
     page.evaluate("([k, s, u]) => { localStorage.clear(); localStorage.setItem(k, s);"
                   " if (u) localStorage.setItem(k + ':ui', u); }",
                   [GAME_KEY, json.dumps(st), json.dumps(ui_state) if ui_state else None])

@@ -11,7 +11,7 @@ uv run python -m http.server 8000
 # or: python3 -m http.server 8000
 ```
 
-Open http://localhost:8000/ for the host console. "Start game" opens the scoreboard in a popup named `trial-and-era-scoreboard`, the window to screen-share. If the browser blocks it, use "Open scoreboard" in the header.
+Open http://localhost:8000/ for the splash page, whose "Start game" leads to the host console at `host.html`. The lobby's own "Start game" opens the scoreboard in a popup named `trial-and-era-scoreboard`, the window to screen-share. If the browser blocks it, use "Open scoreboard" in the header.
 
 ## Deploying
 
@@ -19,7 +19,7 @@ Publish the repository root on any static host. On GitHub Pages, deploy from you
 
 The site lives at https://trialandera.spitball.show/. Link previews and search need absolute URLs, so `index.html`, `robots.txt`, `sitemap.xml` and `tests/seo.test.mjs` all name it, and a deploy elsewhere must change all four.
 
-Only Cloudflare Pages applies the Content Security Policy in `_headers`, so a violation shows up only once deployed. The policy blocks inline scripts and `eval`, and its `connect-src` allows only `https://en.wikipedia.org` and `https://www.wikidata.org`, so any new origin must be added to it. Inline styles stay allowed for the host's `<style>` block, the `<style>` Font Awesome injects, and Wikipedia's HTML, which the parsed copy checks against the page's policy. `font-src` allows jsDelivr for the Acme and Permanent Marker files, and `data:` images stay allowed for Pico's form icons.
+Only Cloudflare Pages applies the Content Security Policy in `_headers`, so a violation shows up only once deployed. The policy blocks inline scripts and `eval`, and its `connect-src` allows only `https://en.wikipedia.org` and `https://www.wikidata.org`, so any new origin must be added to it. Inline styles stay allowed for the `<style>` blocks in the splash and host pages, the `<style>` Font Awesome injects, and Wikipedia's HTML, which the parsed copy checks against the page's policy. `font-src` allows jsDelivr for the Acme and Permanent Marker files, and `data:` images stay allowed for Pico's form icons.
 
 ## How a game runs
 
@@ -135,23 +135,24 @@ The host console is the only writer. The scoreboard re-renders on `storage` even
 
 | File | Role |
 | --- | --- |
-| `index.html`, `js/host.js` | Host console |
-| `js/theme.js` | Host theme button, a blocking `<head>` script so the saved theme applies before first paint |
+| `index.html` | Splash page, the one page with search and link-preview tags |
+| `host.html`, `js/host.js` | Host console |
+| `js/theme.js` | Theme button for the splash page and host console, a blocking `<head>` script so the saved theme applies before first paint |
 | `scoreboard.html`, `js/scoreboard.js` | Screen-shared scoreboard |
 | `js/store.js` | State, persistence, list cache, cross-window sync |
 | `js/wiki.js` | Wikipedia and Wikidata client, card building |
 | `js/years.js` | Year parsing and formatting |
 | `js/game.js` | Rules of play, with no DOM or storage |
 | `js/dom.js` | Helpers shared by both pages |
-| `css/app.css` | Scoreboard styles; the host's few rules sit in `index.html` |
+| `css/app.css` | Scoreboard styles; the splash and host pages keep their few rules inline |
 | `favicon.svg` | Font Awesome's `timeline` in Pico's orange as literal hex, because an SVG image cannot read CSS variables |
 | `apple-touch-icon.png` | The same icon on Pico's dark background, 180 pixels square, for home screens |
 | `og.png` | Link preview image at 1200 × 630, the size `og:image:width` and `og:image:height` state |
-| `robots.txt`, `sitemap.xml` | Crawler rules and the one page to index; the scoreboard opts out with `noindex` |
+| `robots.txt`, `sitemap.xml` | Crawler rules and the one page to index; the host console and scoreboard opt out with `noindex` |
 | `_headers` | Content Security Policy for Cloudflare Pages |
 | `tests/` | Node and browser test suites |
 
-Both pages load Pico CSS 2.1.1's orange theme and Fontsource's Acme and Permanent Marker 5.3.0 from jsDelivr with Subresource Integrity hashes, so a version change means updating `integrity` in both pages. Acme sets headings and years, and Permanent Marker the wordmark. The scoreboard also loads Pico's `pico.colors.min.css` from the floating `@2` tag with no integrity hash, for its amber, jade and red marks. Both pages load Font Awesome Free 7 from jsDelivr's floating `@7` tag.
+All three pages load Pico CSS 2.1.1's orange theme and Fontsource's Acme and Permanent Marker 5.3.0 from jsDelivr with Subresource Integrity hashes, so a version change means updating `integrity` in each. Acme sets headings and years, and Permanent Marker the wordmark. The scoreboard also loads Pico's `pico.colors.min.css` from the floating `@2` tag with no integrity hash, for its amber, jade and red marks. All three load Font Awesome Free 7 from jsDelivr's floating `@7` tag.
 
 ## Testing
 
