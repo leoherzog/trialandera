@@ -6,6 +6,20 @@
   --pico-spacing: 0.75rem;
   --pico-typography-spacing-vertical: 0.5rem;
   --pico-nav-element-spacing-vertical: 0.25rem;
+  --font-display: Acme, var(--pico-font-family-sans-serif);
+  --font-marker: 'Permanent Marker', 'Segoe Print', 'Bradley Hand', casual, cursive;
+}
+
+/* Acme and Permanent Marker have a single 400 weight, so text set in them drops Pico's bold rather than get a
+   synthesized one. */
+h1,
+h2 {
+  --pico-font-family: var(--font-display);
+  --pico-font-weight: 400;
+}
+
+nav mark {
+  font-family: var(--font-marker);
 }
 
 /* The --pico-color-* palette comes from pico.colors.min.css; without it marks lose their background. */
@@ -90,6 +104,13 @@ h1 {
   line-height: 1.15;
   text-align: center;
   white-space: nowrap;
+}
+
+#sb-timeline > article > footer > strong,
+#sb-hand > article > footer > strong,
+#sb-players > article > strong {
+  font-family: var(--font-display);
+  font-weight: 400;
 }
 
 /* The timeline scrolls itself sideways; scoreboard.js centers the pending gap or the latest placement.

@@ -203,7 +203,7 @@ with sync_playwright() as pw:
     ctx2.close()
 
     # DOM helpers and the favicon's fill in each color scheme.
-    for scheme, want in (('light', (0x01, 0x72, 0xad)), ('dark', (0x01, 0xaa, 0xff))):
+    for scheme, want in (('light', (0xbd, 0x3c, 0x13)), ('dark', (0xf5, 0x6b, 0x3d))):
         c = browser.new_context(color_scheme=scheme)
         route(c)
         d, _ = open_page(c, 'dom.html', 'dom-' + scheme)

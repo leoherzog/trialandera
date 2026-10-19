@@ -17,7 +17,7 @@ Open http://localhost:8000/ for the host console. "Start game" opens the scorebo
 
 Publish the repository root on any static host. On GitHub Pages, deploy from your branch's `/ (root)` folder. On Cloudflare Pages, use no framework preset, no build command, and `/` as the output directory, or run `npx wrangler pages deploy . --project-name timeline`.
 
-Only Cloudflare Pages applies the Content Security Policy in `_headers`, so a violation shows up only once deployed. The policy blocks inline scripts and `eval`, and its `connect-src` allows only `https://en.wikipedia.org` and `https://www.wikidata.org`, so any new origin must be added to it. Inline styles stay allowed for the host's `<style>` block, the `<style>` Font Awesome injects, and Wikipedia's HTML, which the parsed copy checks against the page's policy. `data:` images stay allowed for Pico's form icons.
+Only Cloudflare Pages applies the Content Security Policy in `_headers`, so a violation shows up only once deployed. The policy blocks inline scripts and `eval`, and its `connect-src` allows only `https://en.wikipedia.org` and `https://www.wikidata.org`, so any new origin must be added to it. Inline styles stay allowed for the host's `<style>` block, the `<style>` Font Awesome injects, and Wikipedia's HTML, which the parsed copy checks against the page's policy. `font-src` allows jsDelivr for the Acme and Permanent Marker files, and `data:` images stay allowed for Pico's form icons.
 
 ## How a game runs
 
@@ -142,11 +142,11 @@ The host console is the only writer. The scoreboard re-renders on `storage` even
 | `js/game.js` | Rules of play, with no DOM or storage |
 | `js/dom.js` | Helpers shared by both pages |
 | `css/app.css` | Scoreboard styles; the host's few rules sit in `index.html` |
-| `favicon.svg` | Font Awesome's `timeline` in Pico's azure as literal hex, because an SVG image cannot read CSS variables |
+| `favicon.svg` | Font Awesome's `timeline` in Pico's orange as literal hex, because an SVG image cannot read CSS variables |
 | `_headers` | Content Security Policy for Cloudflare Pages |
 | `tests/` | Node and browser test suites |
 
-Both pages load Pico CSS 2.1.1 from jsDelivr with a Subresource Integrity hash, so a version change means updating `integrity` in both pages. The scoreboard also loads Pico's `pico.colors.min.css` from the floating `@2` tag with no integrity hash, for its amber, jade and red marks. Both pages load Font Awesome Free 7 from jsDelivr's floating `@7` tag.
+Both pages load Pico CSS 2.1.1's orange theme and Fontsource's Acme and Permanent Marker 5.3.0 from jsDelivr with Subresource Integrity hashes, so a version change means updating `integrity` in both pages. Acme sets headings and years, and Permanent Marker the wordmark. The scoreboard also loads Pico's `pico.colors.min.css` from the floating `@2` tag with no integrity hash, for its amber, jade and red marks. Both pages load Font Awesome Free 7 from jsDelivr's floating `@7` tag.
 
 ## Testing
 
@@ -164,7 +164,7 @@ uv run tests/run.py host scoreboard  # only these suites
 uv run tests/run.py --live           # also build decks from live Wikipedia
 ```
 
-`--shots` saves screenshots to `tests/artifacts/`, which git ignores. The offline suites still need internet for Pico CSS and Font Awesome. The runner uses Playwright's Chromium, installed with `uvx playwright install chromium`, and on Linux falls back to the newest one already under `~/.cache/ms-playwright`.
+`--shots` saves screenshots to `tests/artifacts/`, which git ignores. The offline suites still need internet for Pico CSS, the fonts and Font Awesome. The runner uses Playwright's Chromium, installed with `uvx playwright install chromium`, and on Linux falls back to the newest one already under `~/.cache/ms-playwright`.
 
 ## License
 
