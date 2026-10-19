@@ -37,6 +37,7 @@
       background-clip: text;
       -webkit-text-fill-color: transparent;
     }
+    #brand { text-decoration: none; }
 
     /* Pico shrinks grouped buttons to their narrowest width, and browsers may break a line right after an icon. */
     [role=group] > button, [role=search] > button, nav button { white-space: nowrap; }
@@ -112,7 +113,9 @@
     <nav>
       <ul>
         <li>
-          <strong><span class="fa-solid fa-timeline" aria-hidden="true"></span> Trial and Era</strong>
+          <a href="./" id="brand">
+            <strong><span class="fa-solid fa-timeline" aria-hidden="true"></span> Trial and Era</strong>
+          </a>
         </li>
         <li>
           <small>
