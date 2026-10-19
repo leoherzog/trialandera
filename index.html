@@ -3,8 +3,49 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trial and Era · Host</title>
+  <title>Trial and Era · A Timeline Game Built from Wikipedia</title>
+  <meta name="description" content="A free Timeline-style card game built from Wikipedia lists. Players take turns placing events, inventions and works in order on a shared timeline.">
+  <meta name="author" content="Leo Herzog">
+  <link rel="canonical" href="https://trialandera.spitball.show/">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Trial and Era">
+  <meta property="og:title" content="Trial and Era · A Timeline Game Built from Wikipedia">
+  <meta property="og:description" content="A free Timeline-style card game built from Wikipedia lists. Players take turns placing events, inventions and works in order on a shared timeline.">
+  <meta property="og:url" content="https://trialandera.spitball.show/">
+  <meta property="og:image" content="https://trialandera.spitball.show/og.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Trial and Era wordmark over a timeline of cards from the Great Pyramid of Giza in 2560 BC to the iPhone in 2007, with the Moon landing marked correct at 1969, credited as a game by Spitball — Startup Ideas on Tap.">
+  <meta property="og:locale" content="en_US">
+  <meta name="twitter:card" content="summary_large_image">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "name": "Trial and Era",
+          "url": "https://trialandera.spitball.show/"
+        },
+        {
+          "@type": "WebApplication",
+          "name": "Trial and Era",
+          "url": "https://trialandera.spitball.show/",
+          "description": "A free Timeline-style card game built from Wikipedia lists. Players take turns placing events, inventions and works in order on a shared timeline.",
+          "image": "https://trialandera.spitball.show/og.png",
+          "applicationCategory": "GameApplication",
+          "operatingSystem": "Any",
+          "browserRequirements": "Requires JavaScript",
+          "isAccessibleForFree": true,
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+          "author": { "@type": "Person", "name": "Leo Herzog", "url": "https://herzog.tech/" }
+        }
+      ]
+    }
+  </script>
   <script src="js/theme.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.orange.min.css"
     integrity="sha384-Lm2BRg+RVlMvrTWma56pxmcU1F+JLC10iu1gmc37k8aBIhcsVT4htOZ7eubKpUV7" crossorigin="anonymous">
@@ -98,6 +139,8 @@
     /* The pending gap shows the chosen card's label at a card's width. */
     #strip > button[aria-pressed=true] { flex-basis: 10rem; align-self: stretch; }
     #strip > button[data-over] { outline: 0.2rem dashed var(--pico-primary-border); outline-offset: 0.2rem; }
+
+    body > footer { color: var(--pico-muted-color); }
   </style>
   <script defer src="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7/js/all.min.js"
     data-mutate-approach="sync"></script>
@@ -346,6 +389,10 @@
       </button>
     </details>
   </main>
+
+  <footer class="container">
+    <small>A game by <a href="https://spitball.show" target="_blank">Spitball — Startup Ideas on Tap</a></small>
+  </footer>
 
   <dialog id="confirm-new" aria-labelledby="confirm-new-title">
     <article>

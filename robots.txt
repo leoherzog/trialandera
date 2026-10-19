@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://trialandera.spitball.show/sitemap.xml

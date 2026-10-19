@@ -17,6 +17,8 @@ Open http://localhost:8000/ for the host console. "Start game" opens the scorebo
 
 Publish the repository root on any static host. On GitHub Pages, deploy from your branch's `/ (root)` folder. On Cloudflare Pages, use no framework preset, no build command, and `/` as the output directory, or run `npx wrangler pages deploy . --project-name timeline`.
 
+The site lives at https://trialandera.spitball.show/. Link previews and search need absolute URLs, so `index.html`, `robots.txt`, `sitemap.xml` and `tests/seo.test.mjs` all name it, and a deploy elsewhere must change all four.
+
 Only Cloudflare Pages applies the Content Security Policy in `_headers`, so a violation shows up only once deployed. The policy blocks inline scripts and `eval`, and its `connect-src` allows only `https://en.wikipedia.org` and `https://www.wikidata.org`, so any new origin must be added to it. Inline styles stay allowed for the host's `<style>` block, the `<style>` Font Awesome injects, and Wikipedia's HTML, which the parsed copy checks against the page's policy. `font-src` allows jsDelivr for the Acme and Permanent Marker files, and `data:` images stay allowed for Pico's form icons.
 
 ## How a game runs
@@ -143,6 +145,9 @@ The host console is the only writer. The scoreboard re-renders on `storage` even
 | `js/dom.js` | Helpers shared by both pages |
 | `css/app.css` | Scoreboard styles; the host's few rules sit in `index.html` |
 | `favicon.svg` | Font Awesome's `timeline` in Pico's orange as literal hex, because an SVG image cannot read CSS variables |
+| `apple-touch-icon.png` | The same icon on Pico's dark background, 180 pixels square, for home screens |
+| `og.png` | Link preview image at 1200 × 630, the size `og:image:width` and `og:image:height` state |
+| `robots.txt`, `sitemap.xml` | Crawler rules and the one page to index; the scoreboard opts out with `noindex` |
 | `_headers` | Content Security Policy for Cloudflare Pages |
 | `tests/` | Node and browser test suites |
 
@@ -150,7 +155,7 @@ Both pages load Pico CSS 2.1.1's orange theme and Fontsource's Acme and Permanen
 
 ## Testing
 
-The rules and year parsing have Node tests, run from the repository root:
+The rules, year parsing and search metadata have Node tests, run from the repository root:
 
 ```sh
 node --test

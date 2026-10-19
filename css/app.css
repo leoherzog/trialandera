@@ -335,3 +335,13 @@ h1 {
 #sb-standings td:last-child {
   text-align: right;
 }
+
+/* The credit sits in the stage's bottom padding, out of the flex column, so it takes no height from the hand. */
+#sb-credit {
+  position: absolute;
+  inset: auto 0 0;
+  font-size: 0.6rem;
+  line-height: calc(var(--stage) * 2.5);
+  text-align: center;
+  color: var(--pico-muted-color);
+}
