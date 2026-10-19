@@ -1,5 +1,5 @@
 // Rules of play: dealing, placement, turns, rounds, sudden death, undo, and standings.
-// Pure functions over the state described in PLAN.md, shared by the host console and the scoreboard.
+// Pure functions over the state described in README.md, shared by the host console and the scoreboard.
 // Functions that change state mutate the object they are given; none touch the DOM or storage.
 
 const MAX_PLAYERS = 8;

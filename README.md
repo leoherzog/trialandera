@@ -45,7 +45,7 @@ Standings list winners first, then players who lasted longer in sudden death, th
 
 Search for a list or timeline page, or paste an English Wikipedia URL, and press "Build"; picking a suggestion builds it at once. Removing a source in the Sources table removes its cards.
 
-Each list item and each table row with an article link becomes a card for the first article it links, taken from the item column in a table. Entries that link a disambiguation page are dropped, and so are undated side lists, such as a count by country, on a mostly dated page. Repeats within a page collapse to one card per article, or per article and text on an entry-text source. `PLAN.md` has the full rules.
+Each list item and each table row with an article link becomes a card for the first article it links, taken from the item column in a table. Entries that link a disambiguation page are dropped, and so are undated side lists, such as a count by country, on a mostly dated page. Repeats within a page collapse to one card per article, or per article and text on an entry-text source. The full rules live in `js/wiki.js`.
 
 Adding to the deck skips a card with the same year as one already there and the same label or, where both show article titles, the same article. Labels compare without case, accents or punctuation. A source built again keeps its label mode.
 
@@ -82,6 +82,49 @@ All data comes from the browser: the MediaWiki Action API on en.wikipedia.org an
 
 Game state, deck included, lives in `localStorage` under `trial-and-era:v1`, and host UI state under `trial-and-era:v1:ui` so typing never wakes the scoreboard. Built lists are cached under `trial-and-era:list:r<RULES>:<title>` and never expire, so a page edited since its build stays as built until `RULES` in `js/wiki.js` changes. Bump it whenever extraction changes. At startup the host deletes lists from other rules and game and UI keys from older versions, but keeps newer ones so a stale tab cannot wipe a newer deploy's game. When storage fills, cached lists go first. The theme choice lives under `trial-and-era:theme`, which cleanup leaves alone.
 
+The saved state has this shape. Bump `VERSION` in `js/store.js` whenever it changes. Startup cleanup then deletes the old key, deck included, so hosts lose any deck they have not exported.
+
+```js
+state = {
+  settings: { handSize },
+  players: [{ id, name }],
+  nextId,
+  phase,                // 'lobby', 'setup', 'playing' or 'over'
+  deck: { cards: [Card], sources: [{ name, title, labelMode }], nextCardId },  // labelMode: 'link' or 'text'
+  gameNumber,           // games dealt so far
+  placementSeq,         // next placement id; undo never rolls it back, so a redone placement animates again
+  game                  // null until the first deal
+}
+
+Card = {
+  id, source, title,    // source name; linked Wikipedia article or null
+  linkLabel, textLabel, // built labels from the article title and from the entry text
+  label, labelEdited,   // what players see; an edited label survives a label mode switch
+  year,                 // integer, negative for BC, never 0; null when unknown
+  yearFrom,             // 'list', 'wikidata', 'typed' or null
+  description, context, // host only; either may give the year away
+  include, excludedByHost,
+  flags                 // 'noyear', 'leak', 'guess', 'duplicate'
+}
+
+game = {
+  number,
+  cards: { [id]: { id, label, year } },  // copied at deal, so deck edits never touch a game
+  draw: [id],           // the top is the last element
+  discard: [id],
+  timeline: [id],       // oldest first; gap i inserts before timeline[i]
+  hands: { [playerId]: [id] },
+  seats: [playerId],    // who plays this round, in turn order
+  turn, round, suddenDeath,
+  finished: [playerId], // emptied their hand this round
+  pending: { cardId, index },  // the host's choice before reveal, shown as the ghost card
+  log: [{ id, round, playerId, cardId, index, correct, year, drawn }],  // drawn: card id or null
+  winners: [playerId],
+  out: { [playerId]: round },  // last round each player knocked out of sudden death played
+  history: [snapshot]   // undo stack, at most 50; see remember() in js/game.js
+}
+```
+
 Browsers give a site about 5 MB, and a dealt game copies each card it uses. When the deck and the dealt game would come near that, the deal summary warns that the scoreboard could stop following the game; removing a source or excluding cards makes room. A failed save says the scoreboard will miss the change and a reload will lose it, and that message stays up.
 
 The host console is the only writer. The scoreboard re-renders on `storage` events, which browsers fire only in other windows. Refreshing either window restores the game, and the host resumes an interrupted build.
@@ -101,6 +144,90 @@ The host console is the only writer. The scoreboard re-renders on `storage` even
 | `css/app.css` | Scoreboard styles; the host's few rules sit in `index.html` |
 | `favicon.svg` | Font Awesome's `timeline` in Pico's azure as literal hex, because an SVG image cannot read CSS variables |
 | `_headers` | Content Security Policy for Cloudflare Pages |
-| `PLAN.md` | Spec: rules, state shape and module contracts |
+| `tests/` | Node and browser test suites |
 
 Both pages load Pico CSS 2.1.1 from jsDelivr with a Subresource Integrity hash, so a version change means updating `integrity` in both pages. The scoreboard also loads Pico's `pico.colors.min.css` from the floating `@2` tag with no integrity hash, for its amber, jade and red marks. Both pages load Font Awesome Free 7 from jsDelivr's floating `@7` tag.
+
+## Testing
+
+The rules and year parsing have Node tests, run from the repository root:
+
+```sh
+node --test
+```
+
+The browser suites drive headless Chromium through the host console and scoreboard, including whole games with sudden death. `tests/run.py` serves the repository on a free port with the Content Security Policy from `_headers`, so policy violations fail locally too, as do console and page errors.
+
+```sh
+uv run tests/run.py                  # offline suites, with Wikipedia mocked
+uv run tests/run.py host scoreboard  # only these suites
+uv run tests/run.py --live           # also build decks from live Wikipedia
+```
+
+`--shots` saves screenshots to `tests/artifacts/`, which git ignores. The offline suites still need internet for Pico CSS and Font Awesome. The runner uses Playwright's Chromium, installed with `uvx playwright install chromium`, and on Linux falls back to the newest one already under `~/.cache/ms-playwright`.
+
+## License
+
+The MIT License (MIT)
+
+Copyright © 2026 Leo Herzog
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## About Me
+
+<a href="https://herzog.tech/" target="_blank">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://herzog.tech/signature/link-light.svg.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://herzog.tech/signature/link.svg.png">
+    <img src="https://herzog.tech/signature/link.svg.png" width="32px">
+  </picture>
+</a>
+<a href="https://mastodon.social/@herzog" target="_blank">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://herzog.tech/signature/mastodon-light.svg.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://herzog.tech/signature/mastodon.svg.png">
+    <img src="https://herzog.tech/signature/mastodon.svg.png" width="32px">
+  </picture>
+</a>
+<a href="https://github.com/leoherzog" target="_blank">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://herzog.tech/signature/github-light.svg.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://herzog.tech/signature/github.svg.png">
+    <img src="https://herzog.tech/signature/github.svg.png" width="32px">
+  </picture>
+</a>
+<a href="https://keybase.io/leoherzog" target="_blank">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://herzog.tech/signature/keybase-light.svg.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://herzog.tech/signature/keybase.svg.png">
+    <img src="https://herzog.tech/signature/keybase.svg.png" width="32px">
+  </picture>
+</a>
+<a href="https://www.linkedin.com/in/leoherzog" target="_blank">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://herzog.tech/signature/linkedin-light.svg.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://herzog.tech/signature/linkedin.svg.png">
+    <img src="https://herzog.tech/signature/linkedin.svg.png" width="32px">
+  </picture>
+</a>
+<a href="https://hope.edu/directory/people/herzog-leo/" target="_blank">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://herzog.tech/signature/anchor-light.svg.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://herzog.tech/signature/anchor.svg.png">
+    <img src="https://herzog.tech/signature/anchor.svg.png" width="32px">
+  </picture>
+</a>
+<br />
+<a href="https://herzog.tech/$" target="_blank">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://herzog.tech/signature/mug-tea-saucer-solid-light.svg.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://herzog.tech/signature/mug-tea-saucer-solid.svg.png">
+    <img src="https://herzog.tech/signature/mug-tea-saucer-solid.svg.png" alt="Buy Me A Tea" width="32px">
+  </picture>
+  Found this helpful? Buy me a tea!
+</a>
