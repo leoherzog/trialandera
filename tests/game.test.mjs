@@ -123,7 +123,7 @@ describe('deal', () => {
     checkInvariants(state, 30);
   });
 
-  test('snapshots only dealable cards as id, label and year', () => {
+  test('snapshots only dealable cards as id, label, year and description', () => {
     const state = makeState(2, 2, 10);
     state.deck.cards[0].include = false;
     state.deck.cards[1].year = null;
@@ -132,10 +132,11 @@ describe('deal', () => {
     assert.equal(Object.keys(g.cards).length, 8);
     assert.equal(g.cards[100], undefined);
     assert.equal(g.cards[101], undefined);
-    assert.deepEqual(g.cards[102], { id: 102, label: 'Card 102', year: 1020 });
+    assert.deepEqual(g.cards[102], { id: 102, label: 'Card 102', year: 1020, description: 'd' });
     state.deck.cards[2].label = 'Edited';
     state.deck.cards[2].year = 1;
-    assert.deepEqual(g.cards[102], { id: 102, label: 'Card 102', year: 1020 });
+    state.deck.cards[2].description = 'Edited';
+    assert.deepEqual(g.cards[102], { id: 102, label: 'Card 102', year: 1020, description: 'd' });
   });
 
   test('first seat rotates each game', () => {

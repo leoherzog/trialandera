@@ -98,6 +98,21 @@ h1 {
   text-wrap: pretty;
 }
 
+/* A description takes up to two lines below the label, which gives up lines to it, so the card keeps its height. */
+#sb-timeline > article > small,
+#sb-hand > article > small {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  line-height: 1.15;
+  text-align: center;
+  color: var(--pico-muted-color);
+  overflow-wrap: break-word;
+  hyphens: auto;
+  text-wrap: pretty;
+}
+
 #sb-timeline > article > footer,
 #sb-hand > article > footer {
   margin-top: auto;
@@ -136,6 +151,14 @@ h1 {
 
 #sb-timeline > article > p {
   font-size: clamp(0.7rem, 13cqi, 1rem);
+}
+
+#sb-timeline > article:has(> small) > p {
+  -webkit-line-clamp: 2;
+}
+
+#sb-timeline > article > small {
+  font-size: clamp(0.6rem, 9cqi, 0.75rem);
 }
 
 /* scoreboard.js sets --chars on the strip to its longest year, so every year shares the size that fits it. */
@@ -244,6 +267,18 @@ h1 {
 
 #sb-hand:has(> article:nth-child(7)) > article > p {
   -webkit-line-clamp: 7;
+}
+
+#sb-hand > article:has(> small) > p {
+  -webkit-line-clamp: 3;
+}
+
+#sb-hand:has(> article:nth-child(7)) > article:has(> small) > p {
+  -webkit-line-clamp: 5;
+}
+
+#sb-hand > article > small {
+  font-size: clamp(0.7rem, 9cqi, 0.95rem);
 }
 
 #sb-hand > article > footer {

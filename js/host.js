@@ -1012,7 +1012,9 @@ function renderPlay() {
 function renderHand(game, active) {
   const ids = game.hands[active] || [];
   const fieldset = $('hand');
-  const key = active + '\n' + ids.map(function (id) { return id + ':' + game.cards[id].label; }).join('\n');
+  const key = active + '\n' + ids.map(function (id) {
+    return id + ':' + game.cards[id].label + ':' + (game.cards[id].description || '');
+  }).join('\n');
   if (key !== shown.hand) {
     shown.hand = key;
     $('hand-legend').textContent = playerName(active) + '\'s hand';
@@ -1021,6 +1023,11 @@ function renderHand(game, active) {
       label.dataset.card = String(id);
       label.firstElementChild.value = String(id);
       label.append(game.cards[id].label);
+      if (game.cards[id].description) {
+        const about = document.createElement('small');
+        about.textContent = game.cards[id].description;
+        label.append(about);
+      }
       return label;
     }));
   }

@@ -47,7 +47,7 @@ Standings list winners first, then players who lasted longer in sudden death, th
 
 Search for a list or timeline page, or paste an English Wikipedia URL, and press "Build"; picking a suggestion builds it at once. Removing a source in the Sources table removes its cards.
 
-Each list item and each table row with an article link becomes a card for the first article it links, taken from the item column in a table. Entries that link a disambiguation page are dropped, and so are undated side lists, such as a count by country, on a mostly dated page. Repeats within a page collapse to one card per article, or per article and text on an entry-text source. The full rules live in `js/wiki.js`.
+Each list item, defined term and table row with an article link becomes a card for the first article it links, taken from the item column in a table. A term with no definition after it is a heading, not a card. Entries that link a disambiguation page are dropped, and so are undated side lists, such as a count by country, on a mostly dated page. Repeats within a page collapse to one card per article, or per article and text on an entry-text source. The full rules live in `js/wiki.js`.
 
 Adding to the deck skips a card with the same year as one already there and the same label or, where both show article titles, the same article. Labels compare without case, accents or punctuation. A source built again keeps its label mode.
 
@@ -59,7 +59,7 @@ Years read like "1876", "c. 1440", "500 BC", "AD 79" or "March 10, 1876", and a 
 
 ## Labels and flags
 
-Each card has two built labels: the linked article's title, and the entry's own text cut to a sentence or about 120 characters. Both drop the card's year where it leads, so "1906 San Francisco earthquake" reads "San Francisco earthquake", and the entry text also drops it where it ends or sits in parentheses. Entry text that opens with a century, millennium or decade, as in "6th millennium BC: Irrigation", loses it only when the build found the card's year, so a card whose year the host types keeps it until the label is edited.
+Each card has two built labels: the linked article's title, and the entry's own text cut to a sentence or about 120 characters. A link whose text is its own target keeps that name when it redirects, so "Crock-Pot" stays Crock-Pot rather than Slow cooker. Both drop the card's year where it leads, so "1906 San Francisco earthquake" reads "San Francisco earthquake", and the entry text also drops it where it ends or sits in parentheses. Entry text that opens with a century, millennium or decade, as in "6th millennium BC: Irrigation", loses it only when the build found the card's year, so a card whose year the host types keeps it until the label is edited.
 
 Timeline pages start on entry text, and other lists on article titles. The Labels select in the Sources table switches between the two and leaves labels the host has edited alone. Clearing an edited label restores the built one.
 
@@ -72,11 +72,13 @@ In the deck table, small print under each label gives the card's source, article
 
 Editing a label or year, or switching label mode, excludes a card when it sets no year or year in label, and includes it again when it clears them, unless the host unchecked it. The checkbox can still override either. A year the deck table cannot read is marked invalid and leaves the card without one.
 
+In play, a card also shows its short description under the label, in both windows. A deal drops the card's year where it leads the description, ends it or sits in parentheses, so "1985 video game" reads "Video game". A description that still names a year, decade, century or millennium is left off the card.
+
 ## Typed cards and deck files
 
 "Type cards" opens a form for one label and year, and a box that takes one card per line with the year first or last, as in "1876 Telephone" or "Great Pyramid of Giza, 2560 BC". When both ends read as a year the end wins, so "2001: A Space Odyssey, 1968" is a card for 1968. In the box, a bare number under 1000 needs an era, and lines with no year at either end stay behind to fix. Typed cards go under a source named Typed.
 
-"Export deck" downloads `trial-and-era-deck.json`. Importing one merges it like a build: repeats are skipped, cards keep their include setting and whether the host unchecked them, and each source keeps its label mode unless the deck already has one by that name. A bare JSON array of cards imports too, and cards that name no source go under Imported.
+"Export deck" downloads `trial-and-era-deck.json`. Importing one merges it like a build: repeats are skipped, cards keep their description, their include setting and whether the host unchecked them, and each source keeps its label mode unless the deck already has one by that name. A bare JSON array of cards imports too, and cards that name no source go under Imported.
 
 ## Data and state
 
@@ -104,14 +106,14 @@ Card = {
   label, labelEdited,   // what players see; an edited label survives a label mode switch
   year,                 // integer, negative for BC, never 0; null when unknown
   yearFrom,             // 'list', 'wikidata', 'typed' or null
-  description, context, // host only; either may give the year away
+  description, context, // either may give the year away; the deck table shows both, and cards in play a cleaned description
   include, excludedByHost,
   flags                 // 'noyear', 'leak', 'guess', 'duplicate'
 }
 
 game = {
   number,
-  cards: { [id]: { id, label, year } },  // copied at deal, so deck edits never touch a game
+  cards: { [id]: { id, label, year, description } },  // copied at deal, so deck edits never touch a game; description is '' when it would give the year away
   draw: [id],           // the top is the last element
   discard: [id],
   timeline: [id],       // oldest first; gap i inserts before timeline[i]

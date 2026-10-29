@@ -2,6 +2,8 @@
 // Pure functions over the state described in README.md, shared by the host console and the scoreboard.
 // Functions that change state mutate the object they are given; none touch the DOM or storage.
 
+import { yearlessText } from './years.js';
+
 const MAX_PLAYERS = 8;
 const MAX_HAND = 8;
 const HISTORY_LIMIT = 50;
@@ -49,7 +51,8 @@ export function deal(state, rng = Math.random) {
   const seats = ids.slice(first).concat(ids.slice(0, first));
   const cards = {};
   ready.cards.forEach(function (card) {
-    cards[card.id] = { id: card.id, label: card.label, year: card.year };
+    cards[card.id] = { id: card.id, label: card.label, year: card.year,
+      description: yearlessText(card.description, card.year) };
   });
   const draw = shuffle(ready.cards.map(function (card) { return card.id; }), rng);
   const hands = {};

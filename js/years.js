@@ -1,5 +1,6 @@
-// Year parsing and formatting for cards: a strict parse for host input and a scanner that finds the first year
-// in free text from Wikipedia rows and list items. Years are integers, negative for BC, never 0.
+// Year parsing and formatting for cards: a strict parse for host input, a scanner that finds the first year in
+// free text from Wikipedia rows and list items, and removal of a card's year from text it shows. Years are
+// integers, negative for BC, never 0.
 
 const MIN_YEAR = -10000;
 const MONTH = '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sept?(?:ember)?|' +
@@ -44,6 +45,9 @@ const LEADING = /^[\s"'“‘•·*]*(?:(?:by|before|after|around|about|approxim
 const BC_ONLY = new RegExp('^(?:' + BC + ')$');
 const MONTH_AFTER = new RegExp('^\\s*' + MONTH + '(?!\\p{L})', 'u');
 const MONTH_BEFORE = new RegExp(MONTH + '\\s*$', 'u');
+export const LEAD_SEPARATOR = /^[\s:;,.–—-]+/;
+// A decade, century or millennium, which narrows a year down about as far as the year itself.
+const PERIOD_MENTION = /\d+(?:st|nd|rd|th)[\s-](?:century|millennium)|\d0s(?!\p{L})/iu;
 const THOUSANDS = /(\d),(?=\d{3}(?!\d))/g;
 // A range whose end keeps only its last two digits, as in a season "1946–47".
 const SHORT_RANGE = /(?<!\d)(\d{2})(\d{2})(\s*[-–—/]\s*)(\d{2})(?!\d)/g;
@@ -178,4 +182,52 @@ export function mentionsYear(text, year) {
     if (!DIGIT.test(plain.charAt(i - 1)) && !DIGIT.test(plain.charAt(i + digits.length))) return true;
   }
   return false;
+}
+
+/**
+ * Text without the first mention of `year` that leads it, sits in parentheses, or ends it, along with that
+ * mention's separators. A mention inside a sentence stays. Bare numbers count, since only a mention equal to
+ * `year` is removed.
+ * @param {string} text
+ * @param {number|null} year
+ * @returns {string}
+ */
+export function withoutYear(text, year) {
+  if (year == null) return text;
+  for (let from = 0; from < text.length;) {
+    const found = findYear(text.slice(from), { bare: true });
+    if (!found) break;
+    const index = from + found.index;
+    const end = index + found.length;
+    if (found.year === year) {
+      if (found.leading && from === 0) return text.slice(end).replace(LEAD_SEPARATOR, '').trim();
+      const before = text.slice(0, index);
+      const after = text.slice(end);
+      const paren = /\(\s*$/.exec(before) && /^\s*\)/.exec(after);
+      if (paren) {
+        return (before.replace(/\s*\(\s*$/, '') + after.replace(/^\s*\)/, '')).replace(/\s+/g, ' ').trim();
+      }
+      if (/^[\s.]*$/.test(after)) {
+        return before.replace(/[\s,;:–—-]+$/, '').replace(/\s+(?:in|on|by|from|since|until|during|of|around|about)$/i, '')
+          .trim();
+      }
+    }
+    from = end;
+  }
+  return text;
+}
+
+/**
+ * Text, such as an article's short description, that a card can show without giving its year away: the text
+ * without its mention of `year`, or '' when a year, decade, century or millennium is still in it. Text that lost a
+ * leading year starts uppercase, so "1985 video game" reads "Video game".
+ * @param {string} text
+ * @param {number|null} year
+ * @returns {string}
+ */
+export function yearlessText(text, year) {
+  const full = String(text ?? '').trim();
+  const rest = withoutYear(full, year);
+  if (!rest || findYear(rest) || mentionsYear(rest, year) || PERIOD_MENTION.test(rest)) return '';
+  return rest === full ? rest : rest.charAt(0).toUpperCase() + rest.slice(1);
 }

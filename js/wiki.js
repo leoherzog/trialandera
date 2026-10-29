@@ -1,7 +1,7 @@
 // Browser client for the MediaWiki Action API and the Wikidata API: page search, list extraction, title
 // resolution, and building timeline cards whose years come from the list itself or from Wikidata.
 
-import { findYear, mentionsYear } from './years.js';
+import { findYear, mentionsYear, withoutYear, LEAD_SEPARATOR } from './years.js';
 
 const API = 'https://en.wikipedia.org/w/api.php';
 const WIKIDATA = 'https://www.wikidata.org/w/api.php';
@@ -48,7 +48,6 @@ const VAGUE_LEAD = /^[\s"'“]*(?:(?:by|before|after|around|about|from|since|unt
 const PERIOD = /(\d+)(?:st|nd|rd|th)[\s-](century|millennium)(?:\s*(BCE?|AD|CE)(?!\p{L}))?|(\d+0)s(?:\s*(BCE?)(?!\p{L}))?/giu;
 // A bare number leads a timeline entry as its year only when a separator, not another number, follows it.
 const BARE_LEAD_END = /^\s*(?::|[–—-](?!\s*\p{N}))/u;
-const LEAD_SEPARATOR = /^[\s:;,.–—-]+/;
 const MONTH = '(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|June?|July?|Aug(?:ust)?|Sept?(?:ember)?|' +
   'Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\\.?';
 const DAY = '\\d{1,2}(?:st|nd|rd|th)?';
@@ -67,7 +66,7 @@ const YEAR_PRECISION = 9;
 const MIN_YEAR = -10000;
 
 /** Card rules version; cached lists built under other rules are rebuilt. */
-export const RULES = 2;
+export const RULES = 3;
 
 function sleep(ms, signal) {
   if (signal) signal.throwIfAborted();
@@ -464,9 +463,17 @@ function dateColumns(layout, start, itemCols) {
   return cols;
 }
 
+// A definition list term's definition, past any terms that share it, or null. A term without one is a
+// pseudo-heading, as wikitext's ";" makes, not an entry.
+function definitionOf(dt) {
+  let next = dt.nextElementSibling;
+  while (next && next.tagName === 'DT') next = next.nextElementSibling;
+  return next && next.tagName === 'DD' ? next : null;
+}
+
 /**
- * Entries of a page: one per table row with an article link in its item column, and one per list item with an
- * article link of its own. Each keeps its links, text, and the year the page gives it, if any.
+ * Entries of a page: one per table row with an article link in its item column, and one per list item or defined
+ * term with an article link of its own. Each keeps its links, text, and the year the page gives it, if any.
  * @param {Document} doc
  * @returns {Array<object>} groups in document order: {el, container, links, text, context, year, leading, guess}
  */
@@ -518,20 +525,21 @@ function itemGroups(doc) {
     });
   });
 
-  doc.querySelectorAll('li').forEach(function (li) {
-    if (!counts(li)) return;
-    const cell = li.closest('td, th');
+  doc.querySelectorAll('li, dt').forEach(function (item) {
+    const definition = item.tagName === 'DT' ? definitionOf(item) : null;
+    if (!counts(item) || (item.tagName === 'DT' && !definition)) return;
+    const cell = item.closest('td, th');
     if (cell && cell.closest('table').querySelector('th')) return;
-    const links = articleLinks(li, li);
+    const links = articleLinks(item, item);
     if (!links.length) return;
-    const text = textOf(li, true);
+    const text = textOf(item, true);
     const lead = findYear(text);
     groups.push({
-      el: li,
-      container: li.parentElement,
+      el: item,
+      container: item.parentElement,
       links: links,
       text: text,
-      context: text,
+      context: definition ? [text, textOf(definition, true)].filter(Boolean).join(' · ') : text,
       year: lead && lead.leading ? lead.year : null,
       leading: Boolean(lead && lead.leading),
       guess: false
@@ -549,7 +557,7 @@ function itemGroups(doc) {
 // On a timeline page, where most list items lead with a year, a bare number leading an item is its year too,
 // as in "563: Pendentive dome".
 function bareLeadYears(groups) {
-  const items = groups.filter(function (g) { return g.el.tagName === 'LI'; });
+  const items = groups.filter(function (g) { return g.el.tagName !== 'TR'; });
   if (items.filter(function (g) { return g.leading; }).length * 2 < items.length) return;
   items.forEach(function (g) {
     if (g.year != null) return;
@@ -562,12 +570,12 @@ function bareLeadYears(groups) {
 }
 
 // Years for entries the row or item text left undated: an enclosing list item that leads with a year, then the
-// nearest heading that is a single year, then, for list items only, the first year in the text as a guess.
+// nearest heading that is a single year, then, for list items and terms only, the first year in the text as a guess.
 // An entry dated by its place under a year reads like one that leads with it.
 function fillListYears(doc, groups) {
   const byEl = new Map(groups.map(function (g) { return [g.el, g]; }));
   const stack = [];
-  doc.querySelectorAll('h1, h2, h3, h4, h5, h6, tr, li').forEach(function (el) {
+  doc.querySelectorAll('h1, h2, h3, h4, h5, h6, tr, li, dt').forEach(function (el) {
     const level = /^H(\d)$/.exec(el.tagName);
     if (level) {
       stack.length = Number(level[1]);
@@ -576,7 +584,8 @@ function fillListYears(doc, groups) {
     }
     const group = byEl.get(el);
     if (!group || group.year != null) return;
-    const parent = el.tagName === 'LI' ? el.parentElement.closest('li') : null;
+    const item = el.tagName !== 'TR';
+    const parent = item ? el.parentElement.closest('li') : null;
     const parentLead = parent ? findYear(textOf(parent, true)) : null;
     if (parentLead && parentLead.leading) {
       group.year = parentLead.year;
@@ -590,7 +599,7 @@ function fillListYears(doc, groups) {
         return;
       }
     }
-    if (el.tagName === 'LI' && !VAGUE_LEAD.test(group.text)) {
+    if (item && !VAGUE_LEAD.test(group.text)) {
       const loose = findYear(group.text);
       if (loose) {
         group.year = loose.year;
@@ -710,34 +719,6 @@ async function wikidataYears(titles, props, onProgress, signal) {
   return result;
 }
 
-// Text without the first mention of `year` that leads it, sits in parentheses, or ends it, along with that
-// mention's separators, so the label hides the answer. A mention inside a sentence stays, and the card is
-// flagged as a leak. Bare numbers count, since only a mention equal to the card's year is removed.
-function withoutYear(text, year) {
-  if (year == null) return text;
-  for (let from = 0; from < text.length;) {
-    const found = findYear(text.slice(from), { bare: true });
-    if (!found) break;
-    const index = from + found.index;
-    const end = index + found.length;
-    if (found.year === year) {
-      if (found.leading && from === 0) return text.slice(end).replace(LEAD_SEPARATOR, '').trim();
-      const before = text.slice(0, index);
-      const after = text.slice(end);
-      const paren = /\(\s*$/.exec(before) && /^\s*\)/.exec(after);
-      if (paren) {
-        return (before.replace(/\s*\(\s*$/, '') + after.replace(/^\s*\)/, '')).replace(/\s+/g, ' ').trim();
-      }
-      if (/^[\s.]*$/.test(after)) {
-        return before.replace(/[\s,;:–—-]+$/, '').replace(/\s+(?:in|on|by|from|since|until|during|of|around|about)$/i, '')
-          .trim();
-      }
-    }
-    from = end;
-  }
-  return text;
-}
-
 // Article title without a trailing parenthetical, and without a leading year when that year is the card's.
 // Titles always start uppercase, so link text such as "iPhone" restores a lowercase start.
 function linkLabel(title, year, alias) {
@@ -750,6 +731,15 @@ function linkLabel(title, year, alias) {
     if (rest) return rest;
   }
   return base;
+}
+
+// Title a link-mode label names: the title a link points to when its text is that title and it redirects, so
+// "Crock-Pot" keeps its name rather than taking its target's, "Slow cooker". Otherwise the article's own title.
+function shownTitle(entry) {
+  const linked = entry.linked;
+  if (!linked || linked === entry.page.title || !entry.alias) return entry.page.title;
+  const text = entry.alias.charAt(0).toUpperCase() + entry.alias.slice(1);
+  return text === linked || text === linked.replace(/\s*\([^()]*\)$/, '') ? linked : entry.page.title;
 }
 
 function wordCount(text) {
@@ -777,6 +767,7 @@ function claimEntries(groups, resolved, pageTitle) {
     }
     entries.push(Object.assign({}, group, {
       page: page,
+      linked: titleFromHref(link.getAttribute('href')),
       alias: link.textContent.replace(/\s+/g, ' ').trim(),
       vague: vagueRange(group.text)
     }));
@@ -827,7 +818,7 @@ function textLabel(entry) {
 
 function toCard(entry, labelMode) {
   const year = entry.year;
-  const link = linkLabel(entry.page.title, year, entry.alias);
+  const link = linkLabel(shownTitle(entry), year, entry.alias);
   const text = textLabel(entry) || link;
   const label = labelMode === 'text' ? text : link;
   const flags = [];

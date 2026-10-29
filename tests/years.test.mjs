@@ -1,7 +1,7 @@
 // Year parsing and formatting in js/years.js: what counts as a year, the span it covers, and year leaks in labels.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { formatYear, parseYear, findYear, mentionsYear } from '../js/years.js';
+import { formatYear, parseYear, findYear, mentionsYear, yearlessText } from '../js/years.js';
 
 const NOW = new Date().getFullYear();
 
@@ -169,4 +169,23 @@ test('mentionsYear sees a year written with a thousands comma', function () {
   assert.equal(mentionsYear('Settled by 10,000 BC', -1000), false);
   assert.equal(mentionsYear('9,600 people', -600), false);
   assert.equal(mentionsYear('Telephone (1876)', 1876), true);
+});
+
+test('yearlessText drops the year where it leads, ends or sits in parentheses', function () {
+  assert.equal(yearlessText('1985 video game', 1985), 'Video game');
+  assert.equal(yearlessText('Video game by Nintendo (1985)', 1985), 'Video game by Nintendo');
+  assert.equal(yearlessText('Toy introduced in 1959', 1959), 'Toy introduced');
+  assert.equal(yearlessText('American rock band', 1965), 'American rock band');
+  assert.equal(yearlessText('Nintendo 64 game', 1996), 'Nintendo 64 game');
+  assert.equal(yearlessText('', 1985), '');
+  assert.equal(yearlessText(undefined, 1985), '');
+});
+
+test('yearlessText hides text that still dates the card', function () {
+  assert.equal(yearlessText('Film released in 1995 by Disney', 1995), '');
+  assert.equal(yearlessText('1986 sequel to the 1985 video game', 1986), '');
+  assert.equal(yearlessText('Fad of the 1990s', 1997), '');
+  assert.equal(yearlessText('19th-century painting', 1850), '');
+  assert.equal(yearlessText('Eruption in AD 79 that buried Pompeii', 79), '');
+  assert.equal(yearlessText('1985', 1985), '');
 });

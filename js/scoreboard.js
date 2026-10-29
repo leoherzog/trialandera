@@ -101,15 +101,19 @@ function renderWaiting(state, show) {
   $('sb-wait-detail').replaceChildren(icon('layer-group'), ' ' + detail);
 }
 
-function cardEl(label, yearText) {
+// A card's face: its label, its description when it has one, and yearText in the footer.
+function cardEl(card, yearText) {
   const el = fromTemplate('tpl-card');
-  el.querySelector('p').textContent = label;
+  el.querySelector('p').textContent = card ? card.label : '';
+  const about = el.querySelector('small');
+  if (card && card.description) about.textContent = card.description;
+  else about.remove();
   el.querySelector('strong').textContent = yearText;
   return el;
 }
 
 function yearCard(card) {
-  return cardEl(card.label, formatYear(card.year));
+  return cardEl(card, formatYear(card.year));
 }
 
 function resultMark(el, correct) {
@@ -138,7 +142,7 @@ function renderTimeline(game, last, fresh, age) {
       slots.push(wrong);
     }
     if (pending.index === gap) {
-      ghost = cardEl(pending.cardId === null ? '' : game.cards[pending.cardId].label, '?');
+      ghost = cardEl(pending.cardId === null ? null : game.cards[pending.cardId], '?');
       ghost.dataset.ghost = '';
       slots.push(ghost);
     }
@@ -240,7 +244,7 @@ function renderTurn(state, game) {
   count.textContent = ' · ' + cardCount(hand.length) + ' to play';
   $('sb-player').replaceChildren(icon('hand-point-right'), ' ' + playerName(state, playerId), count);
   $('sb-hand').replaceChildren(...hand.map(function (id) {
-    const el = cardEl(game.cards[id].label, '?');
+    const el = cardEl(game.cards[id], '?');
     if (id === game.pending.cardId) el.setAttribute('aria-current', 'true');
     return el;
   }));

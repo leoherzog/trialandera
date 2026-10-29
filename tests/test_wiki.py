@@ -61,19 +61,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 UNIT = r"""async () => {
   const w = await import('/js/wiki-internals.js');
+  const y = await import('/js/years.js');
   const out = [];
   function eq(name, actual, expected) {
     out.push([name, JSON.stringify(actual) === JSON.stringify(expected), JSON.stringify(actual) + ' expected ' + JSON.stringify(expected)]);
   }
-  eq('lead', w.withoutYear('1876: Bell patents the telephone.', 1876), 'Bell patents the telephone.');
-  eq('lead qualifier', w.withoutYear('By 407 BC: Wheelbarrow in Greece', -407), 'Wheelbarrow in Greece');
-  eq('lead bare', w.withoutYear('563: Pendentive dome', 563), 'Pendentive dome');
-  eq('paren', w.withoutYear('Toy Story (1995) by Pixar', 1995), 'Toy Story by Pixar');
-  eq('paren end', w.withoutYear('Toy Story (1995)', 1995), 'Toy Story');
-  eq('trailing', w.withoutYear('Telephone, 1876', 1876), 'Telephone');
-  eq('trailing dot', w.withoutYear('Telephone invented in 1876.', 1876), 'Telephone invented');
-  eq('mid stays', w.withoutYear('Bombs are used in 1221 by the Jin', 1221), 'Bombs are used in 1221 by the Jin');
-  eq('other year', w.withoutYear('1984 (novel)', 1949), '1984 (novel)');
+  eq('lead', y.withoutYear('1876: Bell patents the telephone.', 1876), 'Bell patents the telephone.');
+  eq('lead qualifier', y.withoutYear('By 407 BC: Wheelbarrow in Greece', -407), 'Wheelbarrow in Greece');
+  eq('lead bare', y.withoutYear('563: Pendentive dome', 563), 'Pendentive dome');
+  eq('paren', y.withoutYear('Toy Story (1995) by Pixar', 1995), 'Toy Story by Pixar');
+  eq('paren end', y.withoutYear('Toy Story (1995)', 1995), 'Toy Story');
+  eq('trailing', y.withoutYear('Telephone, 1876', 1876), 'Telephone');
+  eq('trailing dot', y.withoutYear('Telephone invented in 1876.', 1876), 'Telephone invented');
+  eq('mid stays', y.withoutYear('Bombs are used in 1221 by the Jin', 1221), 'Bombs are used in 1221 by the Jin');
+  eq('other year', y.withoutYear('1984 (novel)', 1949), '1984 (novel)');
   eq('linkLabel paren', w.linkLabel('Up (2009 film)', 2009), 'Up');
   eq('linkLabel lead', w.linkLabel('1906 San Francisco earthquake', 1906), 'San Francisco earthquake');
   eq('linkLabel other lead', w.linkLabel('2001: A Space Odyssey (film)', 1968), '2001: A Space Odyssey');
@@ -203,6 +204,14 @@ PAGES = {
         + row(td('2000'), td(a('Millennium') + ' passes'))
         + '</table>'
     ),
+    'Trademarks': (
+        '<dl><dt>' + a('Tools') + '</dt></dl>'
+        + '<dl><dt>' + a('Aspirin') + '</dt><dd>Still a ' + a('Bayer') + ' trademark in about 80 countries.</dd>'
+        + '<dt>' + a('Crock-Pot') + '</dt><dd>Slow cooker made by ' + a('Sunbeam Products') + '.</dd>'
+        + '<dt>' + a('Lexan (plastic)', 'Lexan') + '</dt><dd>Polycarbonate resin.</dd>'
+        + '<dt>' + a('Biro', 'ballpoint') + '</dt><dt>' + a('Escalator') + '</dt><dd>Two terms, one definition.</dd>'
+        + '</dl>'
+    ),
     'Ranges': (
         '<table class="wikitable">' + row('<th>Name</th>', '<th>Period</th>')
         + row(td(a('Çatalhöyük')), td('c. 7,100 – 5,700 BCE'))
@@ -214,6 +223,8 @@ PAGES = {
         + '</table>'
     ),
 }
+
+REDIRECTS = {'Crock-Pot': 'Slow cooker', 'Lexan (plastic)': 'Polycarbonate', 'Biro': 'Ballpoint pen'}
 
 CLAIMS = {
     'Tycho Brahe': {'P569': '+1546-12-14T00:00:00Z'},
@@ -232,8 +243,11 @@ def wikipedia(route):
     if q.get('action') == 'parse':
         body = {'parse': {'title': q['page'], 'text': PAGES[q['page']]}}
     elif q.get('action') == 'query':
-        body = {'query': {'pages': [{'title': t, 'ns': 0, 'pageid': i + 1, 'description': ''}
-                                    for i, t in enumerate(q['titles'].split('|'))]}}
+        titles = q['titles'].split('|')
+        body = {'query': {
+            'redirects': [{'from': t, 'to': REDIRECTS[t]} for t in titles if t in REDIRECTS],
+            'pages': [{'title': REDIRECTS.get(t, t), 'ns': 0, 'pageid': i + 1, 'description': ''}
+                      for i, t in enumerate(titles)]}}
     else:
         body = {'error': {'info': 'unexpected ' + route.request.url}}
     route.fulfill(status=200, headers={'Access-Control-Allow-Origin': '*'}, content_type='application/json',
@@ -335,6 +349,17 @@ try:
                'ranges: comma-grouped BC range gives its start %s' % g)
         expect(g.get('Pyramid of Userkaf') == -2494 and g.get('Temple of Artemis') == -470,
                'ranges: tilde range gives its BC start %s' % g)
+
+        # Defined terms are entries and a term with no definition is a pseudo-heading. A plain link keeps its own
+        # name through a redirect, and a piped one takes the article's.
+        r = build('Trademarks')
+        cards = {c['label']: c for c in r['cards']}
+        expect(set(cards) == {'Aspirin', 'Crock-Pot', 'Lexan', 'Ballpoint pen', 'Escalator'},
+               'terms: one card per defined term %s' % sorted(cards))
+        expect(cards.get('Crock-Pot', {}).get('title') == 'Slow cooker',
+               'redirect: label keeps the linked name, title is the target %s' % cards.get('Crock-Pot'))
+        expect('Bayer trademark' in cards.get('Aspirin', {}).get('context', ''),
+               'terms: the definition is the context %s' % cards.get('Aspirin'))
 
         # A body that outlasts the attempt timeout is retried, and running out of retries reports a timeout.
         r = page.evaluate(GET_JSON, ['/slow-once', 0])
