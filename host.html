@@ -74,7 +74,11 @@
       cursor: grab;
     }
     #hand > label:has(:checked) { border-color: var(--pico-primary-border); }
-    #hand > label > small { display: block; color: var(--pico-muted-color); }
+    /* The radio takes its own column so a description lines up under the label rather than under the radio. */
+    #hand > label { display: grid; grid-template-columns: auto 1fr; align-items: center; column-gap: 0.5em; }
+    #hand > label > input { margin: 0; }
+    /* Pico pulls a small that follows an input up under it as helper text. */
+    #hand > label > small { grid-column: 2; margin: 0; color: var(--pico-muted-color); }
 
     /* offsetLeft of the strip's children is measured from the strip, which scrolls to keep them in view. */
     #strip {
