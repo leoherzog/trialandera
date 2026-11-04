@@ -47,7 +47,7 @@ Standings list winners first, then players who lasted longer in sudden death, th
 
 Search for a list or timeline page, or paste an English Wikipedia URL, and press "Build"; picking a suggestion builds it at once. Removing a source in the Sources table removes its cards.
 
-Each list item, defined term and table row with an article link becomes a card for the first article it links, taken from the item column in a table. A term with no definition after it is a heading, not a card. Entries that link a disambiguation page are dropped, and so are undated side lists, such as a count by country, on a mostly dated page. Repeats within a page collapse to one card per article, or per article and text on an entry-text source. The full rules live in `js/wiki.js`.
+Each list item, defined term and table row with an article link becomes a card for the first article it links that is not another list page. A table's item column is the one headed Name or Title, else the one headed by the list's subject, such as Album on a list of albums, else the one most rows link from first. A term with no definition after it is a heading, not a card. Entries that link a disambiguation page are dropped, and so are undated side lists, such as a count by country, on a mostly dated page. Repeats within a page collapse to one card per article, or per article and text on an entry-text source. The full rules live in `js/wiki.js`.
 
 Adding to the deck skips a card with the same year as one already there and the same label or, where both show article titles, the same article. Labels compare without case, accents or punctuation. A source built again keeps its label mode.
 

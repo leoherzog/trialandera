@@ -31,6 +31,11 @@ const NOT_TEXT = 'sup.reference, sup.noprint, .sortkey, [style*="display:none"],
 const END_SECTIONS = ['see also', 'notes', 'references', 'citations', 'sources', 'bibliography',
   'further reading', 'external links'];
 const NAME_HEADER = /\b(name|title)\b/i;
+// A list title's qualifier clause, so "List of airlines of the United States" has the subject "airlines".
+const TITLE_QUALIFIER = /\s(of|in|by|on|from|with|for|at|to|that|who|which)\s.*$/i;
+const STOPWORDS = new Set(['and', 'or', 'the', 'a', 'an', 'list', 'lists']);
+// Another list page, which is never an entry's article.
+const LIST_TITLE = /^Lists? of /;
 const NAMESPACE = /^(file|image|media|category|template|help|wikipedia|wp|portal|special|talk|user|module|draft|mediawiki|timedtext)( talk)?:/i;
 // Year, date, decade, and century articles, which a dated entry often links before its subject.
 const DATE_TITLE = new RegExp('^(?:(?:AD )?\\d{1,4}s?(?: BCE?| AD)?|\\d+(?:st|nd|rd|th) (?:century|millennium)' +
@@ -66,7 +71,7 @@ const YEAR_PRECISION = 9;
 const MIN_YEAR = -10000;
 
 /** Card rules version; cached lists built under other rules are rebuilt. */
-export const RULES = 3;
+export const RULES = 4;
 
 function sleep(ms, signal) {
   if (signal) signal.throwIfAborted();
@@ -319,6 +324,59 @@ function yearColumns(grid, header) {
   });
 }
 
+// A list title's subject, lowercased: "List of airlines of the United States" gives "airlines".
+function titleSubject(title) {
+  return title.replace(/^(?:Lists?|Timeline) of\s+/i, '').replace(TITLE_QUALIFIER, '').toLowerCase();
+}
+
+/**
+ * Head nouns of a list title's subject: the last word of each coordinated part, so "biscuits and cookies" gives
+ * both and "best-selling albums" gives "albums".
+ * @param {string} title page title
+ * @returns {Array<string>} lowercased, in title order
+ */
+function headNouns(title) {
+  return titleSubject(title).split(/\s+(?:and|or|&)\s+/).map(function (part) {
+    const words = part.split(/[^\p{L}\p{N}'’-]+/u).filter(function (w) { return w && !STOPWORDS.has(w); });
+    return words[words.length - 1];
+  }).filter(Boolean);
+}
+
+// Whether two lowercased words are the same noun, singular or plural.
+function sameNoun(a, b) {
+  function forms(w) {
+    const out = [w, w + 's', w + 'es'];
+    if (w.endsWith('y')) out.push(w.slice(0, -1) + 'ies');
+    if (w.endsWith('s')) out.push(w.slice(0, -1));
+    if (w.endsWith('es')) out.push(w.slice(0, -2));
+    if (w.endsWith('ies')) out.push(w.slice(0, -3) + 'y');
+    return out;
+  }
+  return a === b || forms(a).includes(b) || forms(b).includes(a);
+}
+
+// A header names a noun when its first word is that noun: "Album" and "Carol(s)" do, "Total albums" does not.
+function headerHasNoun(text, noun) {
+  const words = text.replace(/\(s\)/g, '').toLowerCase().split(/[^\p{L}\p{N}'’-]+/u).filter(Boolean);
+  return words.length > 0 && sameNoun(words[0], noun);
+}
+
+// Columns under a header naming one of the title's head nouns, trying its last noun first. A noun column that no
+// body row links from is skipped, as "Album details" on a discography holds only release notes.
+function nounColumns(layout, header, table, nouns) {
+  const start = header.length ? header[header.length - 1] + 1 : 0;
+  for (let i = nouns.length - 1; i >= 0; i--) {
+    const cols = headerColumns(layout.grid, header, function (text) { return headerHasNoun(text, nouns[i]); });
+    const linked = layout.rows.some(function (row, r) {
+      return r >= start && !isHeaderRow(row) && cols.some(function (c) {
+        return layout.grid[r][c] && articleLinks(layout.grid[r][c], table).length > 0;
+      });
+    });
+    if (linked) return cols;
+  }
+  return [];
+}
+
 // The column holding each row's first article link in most rows, so one unlinked row cannot borrow a neighbor.
 // Year columns vote only when no other column has links, so a winners table yields its winners.
 function linkColumn(layout, start, table, yearCols) {
@@ -475,10 +533,12 @@ function definitionOf(dt) {
  * Entries of a page: one per table row with an article link in its item column, and one per list item or defined
  * term with an article link of its own. Each keeps its links, text, and the year the page gives it, if any.
  * @param {Document} doc
+ * @param {string} title canonical page title, whose head nouns can name a table's item column
  * @returns {Array<object>} groups in document order: {el, container, links, text, context, year, leading, guess}
  */
-function itemGroups(doc) {
+function itemGroups(doc, title) {
   const cutoff = findCutoff(doc);
+  const nouns = headNouns(title);
   const groups = [];
   function counts(el) {
     if (el.closest(SKIP) || el.closest(NOT_ITEMS)) return false;
@@ -491,7 +551,9 @@ function itemGroups(doc) {
     const header = headerRows(layout.rows);
     const lastHeader = header.length ? header[header.length - 1] : -1;
     const yearCols = yearColumns(layout.grid, header);
+    // Name and Title headers come first, so a discography's "Title | Album details" table keeps its titles.
     let itemCols = nameColumns(layout.grid, header);
+    if (!itemCols.length) itemCols = nounColumns(layout, header, table, nouns);
     if (!itemCols.length) itemCols = linkColumn(layout, lastHeader + 1, table, yearCols);
     const cols = {
       yearCols: yearCols.filter(function (c) { return !itemCols.includes(c); }),
@@ -748,7 +810,7 @@ function wordCount(text) {
 
 /**
  * Entries claimed by their first resolved article link. A disambiguation page drops its entry, links to missing
- * pages and to the list itself are passed over.
+ * pages, to other list pages and to the list itself are passed over.
  * @returns {{entries: Array<object>, dropped: number}}
  */
 function claimEntries(groups, resolved, pageTitle) {
@@ -757,7 +819,7 @@ function claimEntries(groups, resolved, pageTitle) {
   groups.forEach(function (group) {
     const link = group.links.find(function (a) {
       const target = resolved.get(titleFromHref(a.getAttribute('href')));
-      return target && target.title !== pageTitle;
+      return target && target.title !== pageTitle && !LIST_TITLE.test(target.title);
     });
     if (!link) return;
     const page = resolved.get(titleFromHref(link.getAttribute('href')));
@@ -856,7 +918,7 @@ export async function buildCards(title, onProgress, signal, cached) {
   if (hit) return hit;
 
   const doc = new DOMParser().parseFromString(page.html, 'text/html');
-  const groups = itemGroups(doc);
+  const groups = itemGroups(doc, page.title);
   const titles = [];
   groups.forEach(function (g) {
     g.links.forEach(function (a) { titles.push(titleFromHref(a.getAttribute('href'))); });

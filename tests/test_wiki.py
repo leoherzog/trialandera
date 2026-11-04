@@ -116,6 +116,11 @@ UNIT = r"""async () => {
   eq('month only', w.textLabel({ text: 'March: Truman Doctrine', year: 1947 }), 'Truman Doctrine');
   eq('month cross', w.textLabel({ text: 'June 24 – May 12: Berlin Blockade', year: 1948 }), 'Berlin Blockade');
   eq('may word', w.textLabel({ text: 'May Day parade happens', year: 1950 }), 'May Day parade happens');
+  eq('headNouns qualifier', w.headNouns('List of airlines of the United States'), ['airlines']);
+  eq('headNouns pair', w.headNouns('List of biscuits and cookies'), ['biscuits', 'cookies']);
+  eq('headNouns timeline', w.headNouns('Timeline of historic inventions'), ['inventions']);
+  eq('headerHasNoun plural', w.headerHasNoun('Carol(s)', 'carols'), true);
+  eq('headerHasNoun later word', w.headerHasNoun('Total albums', 'albums'), false);
   return out;
 }"""
 
@@ -211,6 +216,25 @@ PAGES = {
         + '<dt>' + a('Lexan (plastic)', 'Lexan') + '</dt><dd>Polycarbonate resin.</dd>'
         + '<dt>' + a('Biro', 'ballpoint') + '</dt><dt>' + a('Escalator') + '</dt><dd>Two terms, one definition.</dd>'
         + '</dl>'
+    ),
+    'List of best-selling albums': (
+        '<table class="wikitable">' + row('<th>Artist</th>', '<th>Album</th>', '<th>Released</th>')
+        + row(td(a('Michael Jackson')), td(a('Thriller (album)', 'Thriller')), td('1982'))
+        + row(td(a('Michael Jackson')), td(a('Bad (album)', 'Bad')), td('1987'))
+        + row(td(a('AC/DC')), td(a('Back in Black')), td('1980'))
+        + '</table>'
+        + '<table class="wikitable">' + row('<th>Album details</th>', '<th>Recording</th>', '<th>Year</th>')
+        + row(td('Studio, 44 minutes'), td(a('Rumours')), td('1977'))
+        + row(td('Live, 61 minutes'), td(a('Frampton Comes Alive!')), td('1976'))
+        + '</table>'
+    ),
+    'Timeline of architecture': (
+        '<ul>'
+        + '<li>9500 BC: ' + a('List of oldest extant buildings', 'Oldest known surviving building') + ' – '
+        + a('Göbekli Tepe') + ', in ' + a('Turkey') + '</li>'
+        + '<li>2560 BC: ' + a('Great Pyramid of Giza') + ' is completed</li>'
+        + '<li>' + a('List of tallest buildings') + '</li>'
+        + '</ul>'
     ),
     'Ranges': (
         '<table class="wikitable">' + row('<th>Name</th>', '<th>Period</th>')
@@ -349,6 +373,20 @@ try:
                'ranges: comma-grouped BC range gives its start %s' % g)
         expect(g.get('Pyramid of Userkaf') == -2494 and g.get('Temple of Artemis') == -470,
                'ranges: tilde range gives its BC start %s' % g)
+
+        # With no Name or Title header, the column named for the list's subject is the item column, unless no row
+        # links from it.
+        b = years(build('List of best-selling albums'))
+        expect(b.get('Thriller') == 1982 and b.get('Bad') == 1987 and b.get('Back in Black') == 1980
+               and 'Michael Jackson' not in b and 'AC/DC' not in b, 'noun column: albums, not artists %s' % b)
+        expect(b.get('Rumours') == 1977 and b.get('Frampton Comes Alive!') == 1976,
+               'noun column: an unlinked noun column falls back to the linked one %s' % b)
+
+        # A link to another list page is never an entry's article.
+        r = build('Timeline of architecture')
+        t = {c['title']: c['year'] for c in r['cards']}
+        expect(t.get('Göbekli Tepe') == -9500 and not any(k.startswith('List of') for k in t),
+               'list links: entries claim their own article %s' % t)
 
         # Defined terms are entries and a term with no definition is a pseudo-heading. A plain link keeps its own
         # name through a redirect, and a piped one takes the article's.
