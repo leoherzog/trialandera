@@ -1,5 +1,5 @@
 // Search and link-preview metadata: the splash page, robots.txt and sitemap.xml name one site URL, the images they
-// point to exist at the sizes the tags state, and the host console and scoreboard stay out of search.
+// point to exist at the sizes the tags state, and the host console, scoreboard and 404 page stay out of search.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -49,10 +49,13 @@ test('the touch icon is 180 pixels square', function () {
   assert.deepEqual(pngSize('apple-touch-icon.png'), [180, 180]);
 });
 
-test('the structured data parses and names the site URL', function () {
+test('the structured data parses, names the site URL and resolves every reference', function () {
   const json = JSON.parse(splash.match(/<script type="application\/ld\+json">([^]*?)<\/script>/)[1]);
-  assert.ok(json['@graph'].length > 0);
-  for (const node of json['@graph']) assert.equal(node.url, SITE);
+  const ids = new Set(json['@graph'].map((node) => node['@id']));
+  const own = json['@graph'].filter((node) => node['@id'].startsWith(SITE));
+  assert.ok(own.length > 0);
+  for (const node of own) assert.equal(node.url, SITE, node['@id']);
+  for (const [, id] of JSON.stringify(json).matchAll(/\{"@id":"([^"]*)"\}/g)) assert.ok(ids.has(id), id);
 });
 
 test('robots.txt points at the sitemap, which lists the site URL', function () {
@@ -60,8 +63,16 @@ test('robots.txt points at the sitemap, which lists the site URL', function () {
   assert.deepEqual([...read('sitemap.xml').toString().matchAll(/<loc>([^<]*)<\/loc>/g)].map((m) => m[1]), [SITE]);
 });
 
-test('the host console and scoreboard are kept out of search', function () {
-  for (const page of ['host.html', 'scoreboard.html']) {
+test('the host console, scoreboard and 404 page are kept out of search', function () {
+  for (const page of ['host.html', 'scoreboard.html', '404.html']) {
     assert.ok(read(page).toString().includes('<meta name="robots" content="noindex">'), page);
   }
+});
+
+// Pages serves 404.html at any unknown path, where a relative URL would resolve under that path and miss.
+test('the 404 page loads local files from the root', function () {
+  const page = read('404.html').toString();
+  const urls = [...page.matchAll(/\b(?:href|src)="([^"]*)"/g)].map((m) => m[1]);
+  assert.ok(urls.length > 0);
+  for (const url of urls) assert.ok(/^(https:\/\/|\/)/.test(url), url);
 });

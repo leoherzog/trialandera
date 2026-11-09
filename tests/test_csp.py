@@ -1,4 +1,4 @@
-"""The Content-Security-Policy from _headers: the server applies it, the splash, host and scoreboard pages load and
+"""The Content-Security-Policy from _headers: the server applies it, the splash, host, scoreboard and 404 pages load and
 render their icons under it with no violation, and it blocks inline scripts, eval, and requests to any origin but the Wikipedia and Wikidata APIs.
 Every other suite runs under the same policy and fails on any violation."""
 from playwright.sync_api import sync_playwright
@@ -61,6 +61,13 @@ with sync_playwright() as pw:
     page.wait_for_function("k => (JSON.parse(localStorage.getItem(k)).deck.cards.length || 0) === 12", arg=GAME_KEY,
                            timeout=15000)
     check(page.evaluate('window.__csp') == [], 'a build raises no violation')
+
+    lost = watch(ctx.new_page(), '404')
+    lost.goto(BASE + '404.html')
+    lost.wait_for_function("() => document.querySelector('svg.svg-inline--fa') !== null", timeout=15000)
+    check(lost.evaluate('window.__csp') == [], 'no violations on the 404 page')
+    lost.click('#theme')
+    check(lost.evaluate('document.documentElement.dataset.theme') == 'light', 'the 404 page theme button works')
 
     # The probe's blocked requests and scripts are expected violations, so it runs on a page watched apart.
     ctx.route(BASE + '__eval.js', lambda r: r.fulfill(

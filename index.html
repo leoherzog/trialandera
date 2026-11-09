@@ -6,6 +6,8 @@
   <title>Trial and Era · A Timeline Game Built from Wikipedia</title>
   <meta name="description" content="A free Timeline-style card game built from Wikipedia lists. Players take turns placing events, inventions and works in order on a shared timeline.">
   <meta name="author" content="Leo Herzog">
+  <meta name="robots" content="max-image-preview:large">
+  <meta name="theme-color" content="#bd3c13">
   <link rel="canonical" href="https://trialandera.spitball.show/">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -27,21 +29,40 @@
       "@graph": [
         {
           "@type": "WebSite",
+          "@id": "https://trialandera.spitball.show/#website",
           "name": "Trial and Era",
-          "url": "https://trialandera.spitball.show/"
+          "url": "https://trialandera.spitball.show/",
+          "inLanguage": "en-US",
+          "publisher": { "@id": "https://spitball.show/#organization" }
         },
         {
-          "@type": "WebApplication",
+          "@type": ["WebApplication", "Game"],
+          "@id": "https://trialandera.spitball.show/#app",
           "name": "Trial and Era",
           "url": "https://trialandera.spitball.show/",
           "description": "A free Timeline-style card game built from Wikipedia lists. Players take turns placing events, inventions and works in order on a shared timeline.",
           "image": "https://trialandera.spitball.show/og.png",
+          "inLanguage": "en-US",
           "applicationCategory": "GameApplication",
           "operatingSystem": "Any",
           "browserRequirements": "Requires JavaScript",
           "isAccessibleForFree": true,
           "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-          "author": { "@type": "Person", "name": "Leo Herzog", "url": "https://herzog.tech/" }
+          "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 8 },
+          "author": { "@type": "Person", "name": "Leo Herzog", "url": "https://herzog.tech/" },
+          "publisher": { "@id": "https://spitball.show/#organization" },
+          "isPartOf": { "@id": "https://trialandera.spitball.show/#website" }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://spitball.show/#organization",
+          "name": "Spitball — Startup Ideas on Tap",
+          "url": "https://spitball.show",
+          "logo": "https://media.spitball.show/cover.png",
+          "sameAs": [
+            "https://bsky.app/profile/spitball.show",
+            "https://www.youtube.com/playlist?list=PLKOJ5bfIFuPnuvqs33yc3g7XEUqes-cNe"
+          ]
         }
       ]
     }
